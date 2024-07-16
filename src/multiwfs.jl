@@ -125,6 +125,7 @@ module multiwfs
     end
 
     function search_gain!(sys)
+        
         sys.gain = 0.02
         while is_stable(sys) && sys.gain <= 1.0
             sys.gain += 0.01
