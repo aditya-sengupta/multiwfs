@@ -102,11 +102,7 @@ module multiwfs
         linfreq = vcat(-reverse(linfreq), linfreq)
         nyquist_contour = Hol.(Ref(sys), linfreq)
         gain_margin_points = findall(abs.(imag(nyquist_contour)) .< 0.001)
-        try
-            @assert length(gain_margin_points) > 0
-        catch e
-            println("Failed at filter cutoff $(sys.filter_cutoff) Hz and delay $(sys.frame_delay)")
-        end
+        @assert length(gain_margin_points) > 0
         gain_margin_ind = argmin(real(nyquist_contour)[gain_margin_points])
         gm = -1 / real(nyquist_contour[gain_margin_points][gain_margin_ind])
         phase_margin_points = @. abs(real(nyquist_contour)^2 + imag(nyquist_contour)^2 - 1)
@@ -116,8 +112,12 @@ module multiwfs
     end
 
     function is_stable(sys)
-        _, gm, _, pm, _ = nyquist_and_margins(sys)
-        is_stable(gm, pm)
+        try
+            _, gm, _, pm, _ = nyquist_and_margins(sys)
+            return is_stable(gm, pm)
+        catch
+            return false
+        end
     end
 
     function is_stable(gm, pm)
@@ -125,12 +125,20 @@ module multiwfs
     end
 
     function search_gain!(sys)
-        
-        sys.gain = 0.02
-        while is_stable(sys) && sys.gain <= 1.0
-            sys.gain += 0.01
+        sys.gain = 1.0
+        gain_min, gain_max = 1e-15, 1.0
+        while gain_max - gain_min > 1e-15
+            if is_stable(sys)
+                gain_min = sys.gain
+            else
+                gain_max = sys.gain
+            end
+            sys.gain = (gain_min + gain_max) / 2
         end
-        sys.gain -= 0.01
+        if !is_stable(sys)
+            sys.gain = sys.gain - 1e-15
+        end
+        sys.gain
     end
 
     function nyquist_plot(sys)
@@ -160,7 +168,7 @@ module multiwfs
             abs_Hol_val = abs.(Hol.(Ref(sys), f))
             fstart = argmax(abs_Hol_val)
             fend = findlast(abs_Hol_val .<= 1.0)
-            return f[fstart:fend][findfirst(abs_Hol_val .<= 1.0)]
+            return f[fstart:fend][findfirst(abs_Hol_val[fstart:fend] .<= 1.0)]
         end
     end    
 

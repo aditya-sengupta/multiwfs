@@ -29,13 +29,14 @@ function plot_zero_db_bandwidth_sweep(sys, gains)
 end
 
 function plot_zero_db_bandwidth_sweep(f_cutoffs, delays, zero_db_bandwidths; t="")
-    p = plot(xlabel="Cutoff frequency (Hz)", ylabel="0 dB bandwidth (Hz)", title=t)
+    p = plot(xlabel="Cutoff frequency (Hz)", ylabel="Zero dB bandwidth (Hz)", title=t)
     c = palette([:blue, :red], length(delays))
     for (i, (r, d)) in enumerate(zip(eachcol(zero_db_bandwidths), delays))
         plot!(f_cutoffs, r, label="$d frames", c=c[i])
     end
     p
 end
+
 
 sys.filter_type = "high"
 f_cutoffs, delays, zero_db_bandwidths_high = zero_db_bandwidth_sweep(sys, gains)
@@ -47,3 +48,4 @@ plot(
     plot_zero_db_bandwidth_sweep(f_cutoffs, delays, zero_db_bandwidths_low, t="LPF"),
     plot_zero_db_bandwidth_sweep(f_cutoffs, delays, zero_db_bandwidths_high, t="HPF")
 )
+
