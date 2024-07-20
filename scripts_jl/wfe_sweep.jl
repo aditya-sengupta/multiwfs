@@ -46,4 +46,4 @@ plot(
     plot_wfe_sweep(f_cutoffs, delays, wfes_high, t="HPF"; legend=:bottomright),
 )
 
-plot_wfe_sweep(f_cutoffs, delays, max.(wfes_low, wfes_high))
+plot_wfe_sweep(f_cutoffs, delays, max.(wfes_low, wfes_high), legend=:bottomright)

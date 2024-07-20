@@ -9,7 +9,6 @@ default(fontfamily= "Computer Modern", linewidth=1, framestyle=:box, label=nothi
 
 sys = AOSystem(1000.0, 1.0, 0.01, 0.999, 10, "high", 1.0)
 search_gain!(sys)
-
 gains = gain_map(sys)
 
 function zero_db_bandwidth_sweep(sys, gains; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:0.1:1.0)

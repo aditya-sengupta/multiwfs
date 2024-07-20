@@ -9,3 +9,4 @@ plt.rcParams.update({
 })
 
 from .multiwfs import AOSystem, genpsd, get_freq
+from .lqg import LQG
