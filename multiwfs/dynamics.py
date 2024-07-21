@@ -24,20 +24,11 @@ class StateSpaceDynamics:
     W - the process noise matrix (covariance around Ax)
     V - the measurement noise matrix (covariance around Cx)
     """
-    def __init__(self, A, B, C, D, W, V):
-        self.name = "LQG"
-        self.A, self.B, self.C, self.D, self.W, self.V = A, B, C, D, W, V
-        self.leak = 0
-        obsrank, conrank = self.observability_rank(), self.controllability_rank()
+    def __init__(self, A, B, W):
+        self.A, self.B, self.W = A, B, W
         n = A.shape[0]
         warnings_on = False
-        # you don't actually want these in A-C-D setups, because the process itself won't be controllable
-        # instead, we're just trying to control Cx + Du, meaning we don't care about the controllability rank
-        if warnings_on:
-            if obsrank < n:
-                print(f"WARNING: LQG system is not observable, observability matrix rank is {obsrank} against dimension {n}.")
-            if conrank < n:
-                print(f"WARNING: LQG system is not controllable, controllability matrix rank is {conrank} against dimension {n}.")
+        # for the obsrank/conrank bit, look back at sealrtc
         self.recompute()
 
     def recompute(self):
@@ -46,122 +37,98 @@ class StateSpaceDynamics:
         p = self.B.shape[1]
         assert len(self.B.shape) == 2, "got wrong number of dimensions in B."
         assert self.B.shape == (s, p), f"B must have dimension matching A: got {self.B.shape[0]} whereas {s} was expected in dimension 0, or got wrong number of dimensions."
-        m = self.C.shape[0]
-        assert len(self.C.shape) == 2, "got wrong number of dimensions in C."
-        assert self.C.shape == (m, s), f"C must have dimension matching A: got {self.C.shape[1]} whereas {s} was expected in dimension 1."
-        assert len(self.D.shape) == 2, "got wrong number of dimensions in D."
-        assert self.D.shape == (m, p), f"D must have dimensions matching B and C: got {self.D.shape} whereas {(m, p)} was expected."
         self.process_dist = mvn(cov=self.W, allow_singular=True)
-        self.measure_dist = mvn(cov=self.V, allow_singular=True)
-
-    def observability_rank(self):
-        obs_matrix = np.vstack([self.C @ np.linalg.matrix_power(self.A, i) for i in range(self.state_size)])
-        return np.linalg.matrix_rank(obs_matrix)
-
-    def controllability_rank(self):
-        con_matrix = np.hstack([np.linalg.matrix_power(self.A, i) @ self.B for i in range(self.state_size)])
-        return np.linalg.matrix_rank(con_matrix)
 
     @property
     def state_size(self):
         return self.A.shape[0]
 
     @property
-    def measure_size(self):
-        return self.C.shape[0]
-
-    @property
     def input_size(self):
         return self.B.shape[1]
 
     def __repr__(self):
-        return f"State space dynamics/observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
+        return f"State space dynamics model with state size {self.state_size} and input size {self.input_size}."
+    
+class StateSpaceObservation:
+    """
+    A state-space observation model. Only split off from dynamics so that we can get the same random seed runs when we change the observation model.
+    """
+    def __init__(self, C, D, V):
+        self.C, self.D, self.V = C, D, V
+        self.recompute()
+        
+    def recompute(self):
+        m = self.C.shape[0]
+        assert len(self.C.shape) == 2, "got wrong number of dimensions in C."
+        # some of these checks are useless now
+        assert self.C.shape == (m, self.state_size), f"C must have dimension matching A: got {self.C.shape[1]} whereas {self.state_size} was expected in dimension 1."
+        assert len(self.D.shape) == 2, "got wrong number of dimensions in D."
+        assert self.D.shape == (m, self.input_size), f"D must have dimensions matching B and C: got {self.D.shape} whereas {(m, self.input_size)} was expected."
+        self.measure_dist = mvn(cov=self.V, allow_singular=True)
+        
+    @property
+    def state_size(self):
+        return self.C.shape[1]
 
-    def simulate(self, controllers, nsteps=1000, plot=True):
-        states_one = np.zeros((nsteps, self.state_size))
-        states_one[0] = self.process_dist.rvs()
-        sim = [
-            [
-                copy(states_one),
-                np.zeros((nsteps, self.input_size)),
-                np.zeros((nsteps, self.measure_size))
-            ]
-            for _ in controllers
-        ]
+    @property
+    def input_size(self):
+        return self.D.shape[1]
+        
+    @property
+    def measure_size(self):
+        return self.C.shape[0]
+        
+    def __repr__(self):
+        return f"State space observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
 
-        for j in trange(nsteps):
-            process_noise, measure_noise = self.process_dist.rvs(), self.measure_dist.rvs()
-            for (c, (s, i, m)) in zip(controllers, sim):
-                m[j-1] = self.C @ s[j-1] + self.D @ i[j-1] + measure_noise
-                i[j] = c(m[j-1])
-                s[j] = self.A @ s[j-1] + self.B @ i[j] + process_noise
-            
+def simulate(dynamics, observation, controllers, nsteps=1000, plot=True):
+    states_one = np.zeros((nsteps, dynamics.state_size))
+    states_one[0] = dynamics.process_dist.rvs()
+    sim = {
+        c.name : {
+            "states": copy(states_one),
+            "inputs": np.zeros((nsteps, dynamics.input_size)),
+            "measurements": np.zeros((nsteps, observation.measure_size)),
+        }
+        for c in controllers
+    }
+
+    for j in trange(nsteps):
+        process_noise, measure_noise = dynamics.process_dist.rvs(), observation.measure_dist.rvs()
         for c in controllers:
-            c.reset()
+            sim_c = sim[c.name]
+            s, i, m = sim_c["states"], sim_c["inputs"], sim_c["measurements"]
+            m[j-1] = observation.C @ s[j-1] + observation.D @ i[j-1] + measure_noise
+            i[j] = c(m[j-1])
+            s[j] = dynamics.A @ s[j-1] + dynamics.B @ i[j] + process_noise
+        
+    for c in controllers:
+        c.reset()
 
-        if plot:
-            nsteps_plot = min(1000, nsteps)
-            times = np.arange(nsteps_plot)
-            _, axs = plt.subplots(1, 2, figsize=(10,6))
-            plt.suptitle("Simulated control results")
-            meastoplot = lambda meas: np.convolve(np.linalg.norm(meas, axis=1)[:nsteps_plot], np.ones(10) / 10, 'same')
-            for (con, simres) in zip(controllers, sim):
-                measurements = simres[2]
-                rmsval = rms(measurements, axis=(0,1))
-                axs[0].plot(times, meastoplot(measurements), label=f"{con.name}, rms = {round(rmsval, 3)}")
-                measurement_energy = np.sqrt(np.mean(np.sum(measurements ** 2, axis=1)))
-                freqs, psd = genpsd(measurements[:,0], dt=1/1000) # change this later
-                # adding in quadrature 
-                axs[1].loglog(freqs, psd, label=f"{con.name} PSD")
+    if plot:
+        nsteps_plot = min(1000, nsteps)
+        times = np.arange(nsteps_plot)
+        _, axs = plt.subplots(1, 2, figsize=(10,6))
+        plt.suptitle("Simulated control results")
+        meastoplot = lambda meas: np.convolve(np.linalg.norm(meas, axis=1)[:nsteps_plot], np.ones(10) / 10, 'same')
+        for c in controllers:
+            measurements = sim[c.name]["measurements"]
+            rmsval = rms(measurements, axis=(0,1))
+            axs[0].plot(times, meastoplot(measurements), label=f"{c.name}, rms = {round(rmsval, 3)}")
+            measurement_energy = np.sqrt(np.mean(np.sum(measurements ** 2, axis=1)))
+            freqs, psd = genpsd(measurement_energy, dt=1/1000) # change this later
+            axs[1].loglog(freqs, psd, label=f"{c.name} PSD")
 
-            axs[0].set_title("Control residuals")
-            axs[0].set_xlabel("Time (s)")
-            axs[0].set_ylabel("Simulated time-averaged RMS error")
-            axs[0].legend()
-            axs[1].set_title("Residual PSD")
-            axs[1].set_xlabel("Frequency (Hz)")
-            axs[1].set_ylabel("Simulated power")
-            axs[1].legend()
+        axs[0].set_title("Control residuals")
+        axs[0].set_xlabel("Time (s)")
+        axs[0].set_ylabel("Simulated time-averaged RMS error")
+        axs[0].legend()
+        axs[1].set_title("Residual PSD")
+        axs[1].set_xlabel("Frequency (Hz)")
+        axs[1].set_ylabel("Simulated power")
+        axs[1].legend()
 
-        return sim
+    return sim
 
-def add_delay(lqg, d=1):
-    """
-    Takes in a system of the form x[k+1] = Ax[k] + Bu[k]; y[k] = Cx[k] + Du[k], 
-    and converts it to a system of the form x[k+1] = Ax[k] + Bu[k-d]; y[k] = Cx[k] + Du[k-d].
-
-    Arguments
-    ---------
-    lqg : LQG
-        A Linear-Quadratic-Gaussian dynamical system/controller object without the delay.
-
-    d : int
-        The frame delay.
-
-    Returns
-    -------
-    lqg_delay : LQG
-        The same LQG control problem but with 'd' frames of delay added in.
-    """
-    if d == 0:
-        return lqg
-    s = lqg.state_size
-    p = lqg.input_size
-    m = lqg.measure_size
-    A = np.zeros((s+p*d, s+p*d))
-    A[:s, :s] = lqg.A
-    A[:s,(s+(d-1)*p):((s+d*p))] = lqg.B
-
-    for i in range(1, d):
-        A[(s+i*p):(s+(i+1)*p), (s+(i-1)*p):(s+i*p)] = np.eye(p)
-
-    B = np.zeros((s+p*d, p))
-    B[s:s+p,:] = np.eye(p)
-    C = np.zeros((m, s+p*d))
-    C[:,:s] = lqg.C
-    C[:,(s+p*(d-1)):] = lqg.D
-    D = np.zeros((m, p))
-    W = np.zeros((s+p*d, s+p*d))
-    W[:s, :s] = lqg.W
-    return LQG(A, B, C, D, W, lqg.V)
-
+# look back on sealrtc for the delay version

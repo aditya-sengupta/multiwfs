@@ -52,17 +52,17 @@ class Integrator(Controller):
         return self.u
 
 class LQG(Controller):
-    def __init__(self, dyn, name="LQG"):
+    def __init__(self, dyn, obs, name="LQG"):
         self.name = name
-        self.A, self.B, self.C, self.D = dyn.A, dyn.B, dyn.C, dyn.D
-        Q = dyn.C.T @ dyn.C
-        R = dyn.D.T @ dyn.D
-        S = dyn.C.T @ dyn.D
+        self.A, self.B, self.C, self.D = dyn.A, dyn.B, obs.C, obs.D
+        Q = obs.C.T @ obs.C
+        R = obs.D.T @ obs.D
+        S = obs.C.T @ obs.D
         self.x = np.zeros((dyn.state_size,))
         self.u = np.zeros((dyn.input_size,))
-        self.Pobs = solve_dare(dyn.A.T, dyn.C.T, dyn.W, dyn.V)
+        self.Pobs = solve_dare(dyn.A.T, obs.C.T, dyn.W, obs.V)
         self.Pcon = solve_dare(dyn.A, dyn.B, Q, R, S=S)
-        self.K = self.Pobs @ dyn.C.T @ np.linalg.pinv(dyn.C @ self.Pobs @ dyn.C.T + dyn.V)
+        self.K = self.Pobs @ obs.C.T @ np.linalg.pinv(obs.C @ self.Pobs @ obs.C.T + obs.V)
         self.L = -np.linalg.pinv(R + dyn.B.T @ self.Pcon @ dyn.B) @ (S.T + dyn.B.T @ self.Pcon @ dyn.A)
         
     def measure(self):
