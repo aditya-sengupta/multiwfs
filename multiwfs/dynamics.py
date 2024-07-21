@@ -77,9 +77,6 @@ class StateSpaceDynamics:
     def __repr__(self):
         return f"State space dynamics/observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
 
-    def measure(self):
-        return self.C @ self.x + self.D @ self.u
-    
     def simulate(self, controllers, nsteps=1000, plot=True):
         states_one = np.zeros((nsteps, self.state_size))
         states_one[0] = self.process_dist.rvs()

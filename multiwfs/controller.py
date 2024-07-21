@@ -54,7 +54,7 @@ class Integrator(Controller):
 class LQG(Controller):
     def __init__(self, dyn, name="LQG"):
         self.name = name
-        self.A, self.B, self.C = dyn.A, dyn.B, dyn.C
+        self.A, self.B, self.C, self.D = dyn.A, dyn.B, dyn.C, dyn.D
         Q = dyn.C.T @ dyn.C
         R = dyn.D.T @ dyn.D
         S = dyn.C.T @ dyn.D
@@ -64,14 +64,16 @@ class LQG(Controller):
         self.Pcon = solve_dare(dyn.A, dyn.B, Q, R, S=S)
         self.K = self.Pobs @ dyn.C.T @ np.linalg.pinv(dyn.C @ self.Pobs @ dyn.C.T + dyn.V)
         self.L = -np.linalg.pinv(R + dyn.B.T @ self.Pcon @ dyn.B) @ (S.T + dyn.B.T @ self.Pcon @ dyn.A)
-        self.i_kc = np.eye(dyn.state_size) - self.K @ self.C
+        
+    def measure(self):
+        return self.C @ self.x + self.D @ self.u
         
     def predict(self):
         self.x = self.A @ self.x + self.B @ self.u
 
     def update(self, y):
-        self.x = self.i_kc @ self.x + self.K @ y
-
+        self.x = self.x + self.K @ (y - self.measure())
+        
     def control_law(self):
         self.u = self.L @ self.x
         return self.u
