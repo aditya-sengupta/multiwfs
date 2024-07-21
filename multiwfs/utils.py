@@ -1,34 +1,24 @@
 import numpy as np
 from scipy.signal import windows, welch
 
-def rms(data, axis=0, places=8):
-	"""
-	Computes the root-mean-square of `data` to `places` places.
-	"""
-	return round(
-		np.sqrt( # root
-			np.mean( # mean
-				(data - np.mean(data, axis=axis)) ** 2 # square
-			)
-		),
-		places
-	)
+def f2s(f):
+	return 1j * 2.0 * np.pi * f
 
-def genpsd(tseries, dt, nseg=4, remove_dc=True):
-	nperseg = 2**int(np.log2(tseries.shape[0]/nseg))
-	# firstly ensures that nperseg is a power of 2
-	# secondly ensures that there are at least nseg segments 
-	# per total time series length for noise averaging
+def genpsd(tseries, dt, nseg=4):
+	nperseg = 2**int(np.log2(tseries.shape[0]/nseg)) #firstly ensures that nperseg is a power of 2, secondly ensures that there are at least nseg segments per total time series length for noise averaging
 	window = windows.hann(nperseg)
-	freq, psd = welch(
-		tseries,
-		fs=1./dt,
-		window=window,
-		noverlap=nperseg*0.25,
-		nperseg=nperseg,
-		detrend=False,
-		scaling='density'
-	)
-	if remove_dc:
-		freq, psd = freq[1:], psd[1:] #remove DC component (freq=0 Hz)
+	freq, psd = welch(tseries, fs=1./dt,window=window, noverlap=nperseg*0.25,nperseg=nperseg, detrend=False,scaling='density')
+	freq, psd = freq[1:], psd[1:] #remove DC component (freq=0 Hz)
 	return freq, psd
+
+def get_freq(f_loop, N):
+	min_freq = f_loop / (2 * N)
+	return np.arange(min_freq, f_loop / 2 + min_freq, min_freq)
+
+def rms(data, axis=None):
+	"""
+	Computes the root-mean-square of `data`.
+	"""
+	if axis is None:
+		axis = tuple(i for i in range(len(data.shape)))
+	return np.std(data - data.mean(axis=axis, keepdims=True), axis=axis)

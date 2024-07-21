@@ -9,14 +9,13 @@ from matplotlib import pyplot as plt
 from scipy.stats import multivariate_normal as mvn
 from tqdm import tqdm, trange
 
-from .controller import Controller, Openloop, Integrator
-from .dare import solve_dare
 from .utils import rms, genpsd
 
-class LQG(Controller):
+class StateSpaceDynamics:
     """
-    Kalman filter information
-
+    A state-space dynamics model, for making simulation setups.
+    LQG uses this to make its internal model.
+    
     x - the state
     A - the time-evolution matrix
     B - the input-to-state matrix
@@ -52,15 +51,6 @@ class LQG(Controller):
         assert self.C.shape == (m, s), f"C must have dimension matching A: got {self.C.shape[1]} whereas {s} was expected in dimension 1."
         assert len(self.D.shape) == 2, "got wrong number of dimensions in D."
         assert self.D.shape == (m, p), f"D must have dimensions matching B and C: got {self.D.shape} whereas {(m, p)} was expected."
-        Q = self.C.T @ self.C
-        R = self.D.T @ self.D
-        S = self.C.T @ self.D
-        self.x = np.zeros((self.state_size,))
-        self.u = np.zeros((self.input_size,))
-        self.Pobs = solve_dare(self.A.T, self.C.T, self.W, self.V)
-        self.Pcon = solve_dare(self.A, self.B, Q, R, S=S)
-        self.K = self.Pobs @ self.C.T @ np.linalg.pinv(self.C @ self.Pobs @ self.C.T + self.V)
-        self.L = -np.linalg.pinv(R + self.B.T @ self.Pcon @ self.B) @ (S.T + self.B.T @ self.Pcon @ self.A)
         self.process_dist = mvn(cov=self.W, allow_singular=True)
         self.measure_dist = mvn(cov=self.V, allow_singular=True)
 
@@ -85,35 +75,12 @@ class LQG(Controller):
         return self.B.shape[1]
 
     def __repr__(self):
-        return f"LQG observer and controller with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
+        return f"State space dynamics/observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
 
     def measure(self):
         return self.C @ self.x + self.D @ self.u
-
-    def predict(self):
-        self.x = self.A @ self.x + self.B @ self.u
-
-    def update(self, y):
-        self.x = self.x + self.K @ (y - self.measure())
-
-    def control_law(self):
-        self.u = self.L @ self.x
-        return self.u
-
-    def observe_law(self, measurement):
-        # check out order of operations here
-        self.predict()
-        self.update(measurement[:self.measure_size])
-
-    def simulate(self, con=[], nsteps=10000, plot=True):
-        # make sure nothing you pass in as "con" depends on "self" or things will get weird with the internal state
-        # if you want to compare, e.g. KF + integrator to LQG, use a copy of this instance
-        self.reset()
-        controllers = [Openloop(p=self.input_size), Integrator(s=self.state_size, p=self.input_size)]
-        if not hasattr(con, "__iter__"):
-            con = [con]
-        controllers.extend(con)
-        controllers.append(self)
+    
+    def simulate(self, controllers, nsteps=1000, plot=True):
         states_one = np.zeros((nsteps, self.state_size))
         states_one[0] = self.process_dist.rvs()
         sim = [
@@ -123,9 +90,9 @@ class LQG(Controller):
                 np.zeros((nsteps, self.measure_size))
             ]
             for _ in controllers
-        ] # sim for state-input-measure, I'm so clever 
+        ]
 
-        for j in trange(1, nsteps):
+        for j in trange(nsteps):
             process_noise, measure_noise = self.process_dist.rvs(), self.measure_dist.rvs()
             for (c, (s, i, m)) in zip(controllers, sim):
                 m[j-1] = self.C @ s[j-1] + self.D @ i[j-1] + measure_noise
@@ -139,12 +106,13 @@ class LQG(Controller):
             nsteps_plot = min(1000, nsteps)
             times = np.arange(nsteps_plot)
             _, axs = plt.subplots(1, 2, figsize=(10,6))
-            plt.suptitle("Simulated LQG control results")
+            plt.suptitle("Simulated control results")
             meastoplot = lambda meas: np.convolve(np.linalg.norm(meas, axis=1)[:nsteps_plot], np.ones(10) / 10, 'same')
             for (con, simres) in zip(controllers, sim):
                 measurements = simres[2]
-                rmsval = rms(measurements)
+                rmsval = rms(measurements, axis=(0,1))
                 axs[0].plot(times, meastoplot(measurements), label=f"{con.name}, rms = {round(rmsval, 3)}")
+                measurement_energy = np.sqrt(np.mean(np.sum(measurements ** 2, axis=1)))
                 freqs, psd = genpsd(measurements[:,0], dt=1/1000) # change this later
                 # adding in quadrature 
                 axs[1].loglog(freqs, psd, label=f"{con.name} PSD")
@@ -153,17 +121,12 @@ class LQG(Controller):
             axs[0].set_xlabel("Time (s)")
             axs[0].set_ylabel("Simulated time-averaged RMS error")
             axs[0].legend()
-            axs[1].set_title("Residual PSD (component 0)")
+            axs[1].set_title("Residual PSD")
             axs[1].set_xlabel("Frequency (Hz)")
             axs[1].set_ylabel("Simulated power")
             axs[1].legend()
 
         return sim
-
-    def improvement(self, con, nsteps=1000):
-        simres = self.simulate(con, nsteps=nsteps, plot=False)
-        rms_lqg = rms(simres[-1][2])
-        return [rms(s[2]) / rms_lqg for s in simres[:-1]]
 
 def add_delay(lqg, d=1):
     """

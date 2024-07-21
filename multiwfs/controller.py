@@ -1,10 +1,12 @@
 """
-Definitions of a generic controller, and two simple cases.
+Various control strategies.
 """
 
 from abc import ABC
 from functools import partial
 import numpy as np
+
+from .dare import solve_dare
 
 class Controller(ABC):
     def reset(self):
@@ -22,7 +24,7 @@ class Controller(ABC):
 
 class Openloop(Controller):
     def __init__(self, p=2):
-        self.leak = 1
+        self.leak = 0.999
         self.name = "openloop"
         self.u = np.zeros((p,))
     
@@ -30,7 +32,7 @@ class Openloop(Controller):
         return self.u
 
 class Integrator(Controller):
-    def __init__(self, s=5, p=2, gain=0.1, leak=1.0):
+    def __init__(self, s=5, p=2, gain=0.3, leak=0.999):
         self.s = s
         self.p = p
         self.gain = gain
@@ -48,3 +50,32 @@ class Integrator(Controller):
     def control_law(self):
         self.u = -(self.gain * self.state + (1-self.leak) * self.u)
         return self.u
+
+class LQG(Controller):
+    def __init__(self, dyn, name="LQG"):
+        self.name = name
+        self.A, self.B, self.C = dyn.A, dyn.B, dyn.C
+        Q = dyn.C.T @ dyn.C
+        R = dyn.D.T @ dyn.D
+        S = dyn.C.T @ dyn.D
+        self.x = np.zeros((dyn.state_size,))
+        self.u = np.zeros((dyn.input_size,))
+        self.Pobs = solve_dare(dyn.A.T, dyn.C.T, dyn.W, dyn.V)
+        self.Pcon = solve_dare(dyn.A, dyn.B, Q, R, S=S)
+        self.K = self.Pobs @ dyn.C.T @ np.linalg.pinv(dyn.C @ self.Pobs @ dyn.C.T + dyn.V)
+        self.L = -np.linalg.pinv(R + dyn.B.T @ self.Pcon @ dyn.B) @ (S.T + dyn.B.T @ self.Pcon @ dyn.A)
+        self.i_kc = np.eye(dyn.state_size) - self.K @ self.C
+        
+    def predict(self):
+        self.x = self.A @ self.x + self.B @ self.u
+
+    def update(self, y):
+        self.x = self.i_kc @ self.x + self.K @ y
+
+    def control_law(self):
+        self.u = self.L @ self.x
+        return self.u
+
+    def observe_law(self, measurement):
+        self.predict()
+        self.update(measurement)

@@ -16,7 +16,7 @@ def check_dare(A, B, Q, R, P, S):
         dare_iterative_update(A, B, Q, R, P, S)
     )
     
-def solve_dare_iter(A, B, Q, R, S, verbose=True, max_iters=1000):
+def solve_dare_iter(A, B, Q, R, S, verbose=False, max_iters=1000):
     newP = copy(Q)
     P = np.zeros_like(A)
     iters = 0
@@ -32,7 +32,7 @@ def solve_dare_iter(A, B, Q, R, S, verbose=True, max_iters=1000):
             raise RuntimeError(f"Iterative solve failed in {iters} iterations.")
     return P, iters
 
-def solve_dare(A, B, Q, R, S=None, verbose=True, max_iters=1000):
+def solve_dare(A, B, Q, R, S=None, verbose=False, max_iters=1000):
     if S is None:
         S = np.zeros_like(B)
     try:
