@@ -41,15 +41,17 @@ def solve_dare(A, B, Q, R, S=None, verbose=False, max_iters=1000):
             m = B.shape[1]
             E = np.eye(n)
             P = sg02ad('D', 'B', 'N', 'U', 'Z', 'N', 'S', 'R', n, m, 1, A, E, B, Q, R, S)[1]
+            assert check_dare(A, B, Q, R, P, S)
             if verbose:
                 print("Solved DARE with slycot.")
-        except (ValueError, SlycotArithmeticError) as e:
+        except (ValueError, SlycotArithmeticError, AssertionError) as e:
             if verbose:
                 print("slycot error", e)
             P = la.solve_discrete_are(A, B, Q, R, s=S)
+            assert check_dare(A, B, Q, R, P, S)
             if verbose:
                 print("Solved DARE with scipy.")
-    except (ValueError, np.linalg.LinAlgError) as e:
+    except (ValueError, np.linalg.LinAlgError, AssertionError) as e:
         if verbose:
             print("scipy error\n", e)
             print("Discrete ARE solve failed, falling back to iterative solution.")

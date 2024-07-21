@@ -82,7 +82,7 @@ class StateSpaceObservation:
     def __repr__(self):
         return f"State space observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
 
-def simulate(dynamics, observation, controllers, nsteps=1000, plot=True):
+def simulate(dynamics, observation, controllers, nsteps=10000, plot=True):
     states_one = np.zeros((nsteps, dynamics.state_size))
     states_one[0] = dynamics.process_dist.rvs()
     sim = {
@@ -90,6 +90,7 @@ def simulate(dynamics, observation, controllers, nsteps=1000, plot=True):
             "states": copy(states_one),
             "inputs": np.zeros((nsteps, dynamics.input_size)),
             "measurements": np.zeros((nsteps, observation.measure_size)),
+            "noiseless_measurements": np.zeros((nsteps, observation.measure_size)),
         }
         for c in controllers
     }
@@ -98,8 +99,9 @@ def simulate(dynamics, observation, controllers, nsteps=1000, plot=True):
         process_noise, measure_noise = dynamics.process_dist.rvs(), observation.measure_dist.rvs()
         for c in controllers:
             sim_c = sim[c.name]
-            s, i, m = sim_c["states"], sim_c["inputs"], sim_c["measurements"]
-            m[j-1] = observation.C @ s[j-1] + observation.D @ i[j-1] + measure_noise
+            s, i, m, nm = sim_c["states"], sim_c["inputs"], sim_c["measurements"], sim_c["noiseless_measurements"]
+            nm[j-1] = observation.C @ s[j-1] + observation.D @ i[j-1]
+            m[j-1] = nm[j-1] + measure_noise
             i[j] = c(m[j-1])
             s[j] = dynamics.A @ s[j-1] + dynamics.B @ i[j] + process_noise
         
@@ -113,10 +115,12 @@ def simulate(dynamics, observation, controllers, nsteps=1000, plot=True):
         plt.suptitle("Simulated control results")
         meastoplot = lambda meas: np.convolve(np.linalg.norm(meas, axis=1)[:nsteps_plot], np.ones(10) / 10, 'same')
         for c in controllers:
-            measurements = sim[c.name]["measurements"]
+            measurements = sim[c.name]["noiseless_measurements"]
             rmsval = rms(measurements, axis=(0,1))
-            axs[0].plot(times, meastoplot(measurements), label=f"{c.name}, rms = {round(rmsval, 3)}")
-            measurement_energy = np.sqrt(np.mean(np.sum(measurements ** 2, axis=1)))
+            axs[0].plot(times, meastoplot(measurements), label=f"{c.name}, rms = {rmsval:.3f}")
+            measurement_energy = np.sqrt(
+                np.mean(measurements ** 2, axis=1)
+            )
             freqs, psd = genpsd(measurement_energy, dt=1/1000) # change this later
             axs[1].loglog(freqs, psd, label=f"{c.name} PSD")
 
