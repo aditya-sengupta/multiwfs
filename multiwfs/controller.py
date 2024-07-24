@@ -31,7 +31,7 @@ class Openloop(Controller):
         return self.u
 
 class Integrator(Controller):
-    def __init__(self, s, p, gain=0.3, leak=0.999):
+    def __init__(self, s, p, gain=0.5, leak=0.999):
         self.s = s
         self.p = p
         self.gain = gain
@@ -47,7 +47,7 @@ class Integrator(Controller):
         self.state = measurement[:self.p]
         
     def control_law(self):
-        self.u = self.gain * self.state + (1-self.leak) * self.u
+        self.u = self.gain * self.state + self.leak * self.u
         return self.u
 
 class LQG(Controller):

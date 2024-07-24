@@ -4,6 +4,7 @@ module multiwfs
     using StatsBase: median
     using ProgressMeter
     using Base.Threads
+    using NPZ
 
     function f2s(f)
         return 1im * 2.0 * π * f
@@ -172,17 +173,17 @@ module multiwfs
         end
     end    
 
-    function gain_map(sys; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:0.1:1.0)
+    function gain_map(sys; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:0.1:1.0, save=true)
         gain_map = zeros(length(f_cutoffs), length(delays));
         @showprogress @threads for (i, fc) in collect(enumerate(f_cutoffs))
             for (j, d) in enumerate(delays)
-                tsys = AOSystem(sys.f_loop, d, sys.gain, sys.leak, sys.fpf, "high", fc)
+                tsys = AOSystem(sys.f_loop, d, sys.gain, sys.leak, sys.fpf, sys.filter_type, fc)
                 search_gain!(tsys)
-                candidate_gain = tsys.gain
-                tsys.filter_type = "low"
-                search_gain!(tsys)
-                gain_map[i,j] = min(tsys.gain, candidate_gain)
+                gain_map[i,j] = tsys.gain
             end
+        end
+        if save
+            npzwrite("data/gainmap_loopfreq_$(sys.f_loop)_ftype_$(sys.filter_type).npy", gain_map)
         end
         gain_map
     end    
