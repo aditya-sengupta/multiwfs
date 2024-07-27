@@ -1,7 +1,7 @@
 # %%
 import numpy as np
 from multiwfs.dynamics import StateSpaceDynamics, StateSpaceObservation, simulate
-from multiwfs.controller import Openloop, Integrator, LQG
+from multiwfs.controller import Openloop, Integrator, LQG, MPC
 
 np.random.seed(1)
 
@@ -26,8 +26,8 @@ observation_two = StateSpaceObservation(
     np.array([[1e-2, 0], [0, 1e-2]]) # measure covariance
 )
 
-for observation in (observation_one, observation_two):
-    lqg = LQG(dynamics, observation)
-    controllers = [openloop, integrator, lqg]
-    sim_res = simulate(dynamics, observation, controllers);
+for observation in [observation_one, observation_two]:
+    mpc = MPC(dynamics, observation)
+    controllers = [openloop, integrator, mpc]
+    sim_res = simulate(dynamics, observation, controllers, nsteps=10000);
     # %%
