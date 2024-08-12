@@ -55,9 +55,9 @@ class LQG(Controller):
     def __init__(self, dyn, obs, name="LQG"):
         self.name = name
         self.A, self.B, self.C, self.D = dyn.A, dyn.B, obs.C, obs.D
-        Q = obs.C.T @ obs.C
-        R = obs.D.T @ obs.D
-        S = obs.C.T @ obs.D
+        Q = self.Q = obs.C.T @ obs.C
+        R = self.R = obs.D.T @ obs.D
+        S = self.S = obs.C.T @ obs.D
         self.x = np.zeros((dyn.state_size,))
         self.u = np.zeros((dyn.input_size,))
         self.Pobs = solve_dare(dyn.A.T, obs.C.T, dyn.W, obs.V)
@@ -90,42 +90,46 @@ class MPC(Controller):
         self.Q = obs.C.T @ obs.C
         self.R = obs.D.T @ obs.D
         self.S = obs.C.T @ obs.D
-        self.state_size, self.input_size = dyn.state_size, dyn.input_size
-        self.x = np.zeros((dyn.state_size,))
-        self.x_opt = cp.Variable((dyn.state_size, horizon + 1))
-        self.u = np.zeros((dyn.input_size,))
-        self.u_opt = cp.Variable((dyn.input_size, horizon))
+        self.x_opt = cp.Variable((dyn.state_size, horizon))
+        self.G_opt = cp.Variable((dyn.input_size, dyn.state_size))
         self.Pobs = solve_dare(dyn.A.T, obs.C.T, dyn.W, obs.V)
         self.K = self.Pobs @ obs.C.T @ np.linalg.pinv(obs.C @ self.Pobs @ obs.C.T + obs.V)
         cost = 0
         constr = []
-        self.x_curr = cp.Parameter((self.state_size,))
-        self.x_curr.value = self.x
+        self.x_curr = cp.Parameter((dyn.state_size,))
+        self.x_curr.value = np.zeros((dyn.state_size,))
+        xlast = self.x_curr
         for t in range(self.horizon):
-            xt, xtp1, ut = self.x_opt[:,t], self.x_opt[:,t+1], self.u_opt[:,t]
+            xtp1 = self.x_opt[:,t]
+            # double check timestepping here
+            # do we want u = Gx, or u = GAx, or ...
+            ut = self.G_opt @ xlast
             cost += cp.quad_form(xtp1, self.Q) + cp.quad_form(ut, self.R)
-            constr += [xtp1 == self.A @ xt + self.B @ ut]
-        constr += [self.x_opt[:, 0] == self.x_curr]
+            constr += [xtp1 == self.A @ xlast + self.B @ ut]
+            # this is where some constraint on GM and PM would go
+            xlast = xtp1
         self.problem = cp.Problem(cp.Minimize(cost), constr)
+        self.problem.solve()
         
     def measure(self):
         return self.C @ self.x + self.D @ self.u
         
     def predict(self):
-        self.x = self.A @ self.x + self.B @ self.u
+        self.x_curr.value = self.A @ self.x + self.B @ self.u
 
     def update(self, y):
-        self.x = self.x + self.K @ (y - self.measure())
+        self.x_curr.value = self.x + self.K @ (y - self.measure())
+        
+    @property
+    def x(self):
+        return self.x_curr.value
+        
+    @property
+    def u(self):
+        return self.G_opt.value @ self.x
         
     def control_law(self):
-        # at the current time, you're constrained on state = the KF-recovered state
-        # due to the separation principle, this is the best we can do
-        # after that, we assume x[next] = Ax[curr] + Bu[curr]
-        # LQG doesn't look at W or V anyway so that's fine
-        # and we try and minimize x^T Qx + x^T Su + u^T Ru
-        self.x_curr.value = self.x
         self.problem.solve()
-        self.u = self.u_opt.value[:,0]
         return self.u
 
     def observe_law(self, measurement):

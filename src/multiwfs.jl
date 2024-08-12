@@ -1,5 +1,4 @@
 module multiwfs
-    using ControlSystems
     using Plots
     using StatsBase: median
     using ProgressMeter
@@ -75,8 +74,13 @@ module multiwfs
         end
     end
 
-    function Hol(ao::AOSystem, s::TransferFunction)
+    function Hol(ao::AOSystem, s::Complex)
         return Hwfs(ao, s) * Hlag(ao, s) * Hcont(ao, s) * Hfilter(ao, s) * Hzoh(ao, s)
+    end
+
+    function Hol_unfiltered(ao::AOSystem, f::Real)
+        s = f2s(f)
+        return Hwfs(ao, s) * Hlag(ao, s) * Hcont(ao, s) * Hzoh(ao, s)
     end
 
     function Hol(ao::AOSystem, f)
@@ -188,6 +192,38 @@ module multiwfs
         gain_map
     end    
 
-    export AOSystem, nyquist_and_margins, nyquist_plot, is_stable, search_gain!, zero_db_bandwidth, update_filter_cutoff!, update_frame_delay!, gain_map
+    function psd(x)
+        noverlap = 2^7# 2^(Int(floor(log2(length(x)/4)))-2)
+        n = div(length(x), 8)
+        return welch_pgram(x, n, noverlap; fs=f_loop)
+    end
+    
+    function plot_psd_p!(f, p; kwargs...)
+        plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power"; kwargs...)
+    end
+    
+    function integrator_control(open_loop, gain, leak, update_every; hpf_gain=0.0, delay_frames=1)
+        closed_loop = zeros(length(open_loop))
+        closed_loop[1] = open_loop[1]
+        command = 0.0
+        average_buffer = []
+        hpf_val = 0.0
+        for i in 2:N
+            push!(average_buffer, closed_loop[i-1])
+            if i > 2 + delay_frames
+                hpf_val = sys_high.α * hpf_val + sys_high.α * (closed_loop[i-1-delay_frames] - closed_loop[i-2-delay_frames])
+            end
+            if i % update_every == 0
+                command = leak * command - gain * mean(average_buffer)
+                average_buffer = []
+            end
+            # hpf is stuck to update_every = 1
+            command -= hpf_gain * hpf_val 
+            closed_loop[i] = open_loop[i] + command
+        end
+        closed_loop
+    end
+
+    export AOSystem, nyquist_and_margins, nyquist_plot, is_stable, search_gain!, zero_db_bandwidth, update_filter_cutoff!, update_frame_delay!, gain_map, psd, plot_psd_p!, integrator_control, Hrej, Hol_unfiltered, Hol
 
 end # module multiwfs

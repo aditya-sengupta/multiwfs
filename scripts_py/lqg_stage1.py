@@ -29,5 +29,5 @@ observation_two = StateSpaceObservation(
 for observation in [observation_one, observation_two]:
     mpc = MPC(dynamics, observation)
     controllers = [openloop, integrator, mpc]
-    sim_res = simulate(dynamics, observation, controllers, nsteps=10000);
+    sim_res = simulate(dynamics, observation, controllers);
     # %%
