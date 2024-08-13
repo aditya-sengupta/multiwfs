@@ -35,25 +35,11 @@ module multiwfs
         filter_numerator::Vector{Float64}
         filter_denominator::Vector{Float64}
 
-        function AOSystem(f_loop, frame_delay, gain, leak, fpf, filter_numerator, filter_denominator)
+        function AOSystem(f_loop, frame_delay, gain, leak, fpf)
             Ts = 1 / f_loop
             frame_delay = floor(frame_delay) + round((frame_delay-floor(frame_delay))*fpf)/fpf
             τ = frame_delay * Ts
-            new(f_loop, Ts, frame_delay, τ, gain, leak, fpf, 0.0, [], [], filter_numerator, filter_denominator)
-        end
-    end
-
-    function update_filter!(sys, new_input)
-        pushfirst!(sys.filter_input_history, new_input)
-        if length(sys.filter_input_history) > length(filter_denominator) - 1
-            pop!(sys.filter_input_history)
-        end
-        time_denominator = sum(c * x for (x, c) in zip(sys.filter_input_history, sys.filter_denominator))
-        time_almost_numerator = sum(c * y for (y, c) in zip(sys.filter_output_history[2:end], sys.filter_numerator[2:end]))
-        sys.filter_value = (time_denominator - time_almost_numerator) / sys.filter_numerator[1]
-        pushfirst!(sys.filter_output_history, sys.filter_value)
-        if length(sys.filter_output_history) > length(filter_numerator) - 1
-            pop!(sys.filter_output_history)
+            new(f_loop, Ts, frame_delay, τ, gain, leak, fpf)
         end
     end
 

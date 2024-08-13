@@ -18,13 +18,13 @@ begin
 end;
 
 
-ch_order = 1
+ch_order = 4
  # order of the filter
-cheby_cutoff_fac = f_cutoff / (sys_high.f_loop / 2)
+cheby_cutoff_fac = 0.03
 ch_rp = -20 * log10(0.95)
 @assert 0 < cheby_cutoff_fac < 1
 ch_omegan = [cheby_cutoff_fac] # critical frequencies, nyquist = 1
-hp_ch_numer, hp_ch_denom = signal.cheby1(ch_order, ch_rp, ch_omegan, "highpass", output="ba")
+hp_ch_numer, hp_ch_denom = signal.cheby1(ch_order, ch_rp, ch_omegan, "highpass", output="zpk")
 w, h = signal.freqs(hp_ch_numer, hp_ch_denom)
 plot(w, 20 .* log10.(abs.(h)), xscale=:log10, xlabel="Frequency (Hz)", xticks=[1e-2, 1e-1, 1e0, 1e1, 1e2], ylabel="20 log10(power) (dB)")
 # order 2 should behave similarly to the AR
