@@ -1,10 +1,26 @@
-using Plots
+using Base: prod
+using StaticArrays
 
-function α(f_cutoff, f_loop)
+abstract type Filter end
+
+function f2s(f)
+    return 1im * 2.0 * π * f
+end
+
+function ar1_coeff(f_cutoff, f_loop)
     return exp(-2π * f_cutoff / f_loop)
 end
 
-mutable struct ZPKFilter
+function ar1(f_cutoff, f_loop, filter_type)
+    α = ar1_coeff(f_cutoff, f_loop)
+    if filter_type == "high"
+        return ZPKFilter(1, α, α)
+    elseif filter_type == "low"
+        return ZPKFilter(0, α, 1 - α)
+    end
+end
+
+mutable struct ZPKFilter <: Filter
     z::Float64
     p::ComplexF64
     k::Float64
@@ -23,7 +39,17 @@ function output!(zpkf::ZPKFilter, x_n)
     return y_n
 end
 
-struct CascadeZPKFilter
+function reset!(zpkf::ZPKFilter)
+    zpkf.x_nm1 = 0.0
+    zpkf.y_nm1 = 0.0
+end
+
+function transfer_function(zpkf::ZPKFilter, f_over_f_loop)
+    z = exp(2π * im * f_over_f_loop)
+    return zpkf.k * (z - zpkf.z) / (z - zpkf.p)
+end
+
+struct CascadeZPKFilter <: Filter
     filters::Vector{ZPKFilter}
 
     function CascadeZPKFilter(z::Vector{Float64}, p::Vector{ComplexF64}, k::Float64)
@@ -46,25 +72,14 @@ function output!(czpkf::CascadeZPKFilter, x)
     return x
 end
 
+function transfer_function(czpkf::CascadeZPKFilter, f_over_f_loop)
+    return mapreduce(filt -> transfer_function(filt, f_over_f_loop), *, czpkf.filters)
+end
+
 function reset!(czpkf::CascadeZPKFilter)
     for f in czpkf.filters
-        f.x_nm1 = 0.0
-        f.y_nm1 = 0.0
+        reset!(f)
     end
 end
 
-czpkf = CascadeZPKFilter([1.0, 1.0, 1.0, 1.0], ComplexF64[0.9803579415531668 - 0.08785432565973045im, 0.8896705374015489 - 0.09630554662137608im, 0.8896705374015489 + 0.09630554662137608im, 0.9803579415531668 + 0.08785432565973045im], 0.8353022013649711)
-
-begin
-    outs = []
-    reset!(czpkf)
-    freq = 3.0
-    times = 0.0:1e-2:(2/freq * 10)
-    ins = sin.(2π .* freq .* times)
-    for x in ins
-        push!(outs, output!(czpkf, x))
-    end
-
-    plot(ins)
-    plot!(real.(outs))
-end
+export ar1, ZPKFilter, CascadeZPKFilter, transfer_function, output!, reset!
