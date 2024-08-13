@@ -2,7 +2,7 @@ module multiwfs
     using ProgressMeter
     using Base.Threads
 
-    include("filter.jl")
+    include("zpkfilter.jl")
     include("ao_system.jl")
     include("stability.jl")
     include("performance.jl")

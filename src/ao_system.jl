@@ -6,15 +6,13 @@ mutable struct AOSystem
     gain::Float64
     leak::Float64
     fpf::Int64
-    filter::Filter # type unstable but who cares
-    # if this somehow becomes a perf bottleneck we can make this a parameterized type
-    # or rewrite Filter such that ZPKFilters are cascaded with length 1
+    zpkfilter::ZPKFilter 
 
-    function AOSystem(f_loop, frame_delay, gain, leak, fpf)
+    function AOSystem(f_loop, frame_delay, gain, leak, fpf, zpkfilter)
         Ts = 1 / f_loop
         frame_delay = floor(frame_delay) + round((frame_delay-floor(frame_delay))*fpf)/fpf
         τ = frame_delay * Ts
-        new(f_loop, Ts, frame_delay, τ, gain, leak, fpf)
+        new(f_loop, Ts, frame_delay, τ, gain, leak, fpf, zpkfilter)
     end
 end
 
@@ -45,6 +43,10 @@ end
 
 function Hcont(ao::AOSystem, s)
     return Hlint(ao, s)
+end
+
+function Hfilter(ao::AOSystem, s)
+    return transfer_function(ao.zpkfilter, s)
 end
 
 function Hol(ao::AOSystem, s::Complex)

@@ -2,7 +2,7 @@
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "d13151cfa2b44f4cf947df12ab9a7e079531d5d7"
+project_hash = "cef918b493323421ce3635afbd65d0c529766b95"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1021,6 +1021,17 @@ weakdeps = ["ChainRulesCore"]
 
     [deps.SpecialFunctions.extensions]
     SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
+
+[[deps.StaticArrays]]
+deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
+git-tree-sha1 = "eeafab08ae20c62c44c8399ccb9354a04b80db50"
+uuid = "90137ffa-7385-5640-81b9-e52037218182"
+version = "1.9.7"
+weakdeps = ["ChainRulesCore", "Statistics"]
+
+    [deps.StaticArrays.extensions]
+    StaticArraysChainRulesCoreExt = "ChainRulesCore"
+    StaticArraysStatisticsExt = "Statistics"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "192954ef1208c7019899fbf8049e717f92959682"
