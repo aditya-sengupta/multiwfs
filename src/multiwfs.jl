@@ -4,9 +4,21 @@ module multiwfs
     using ProgressMeter
     using Base.Threads
     using NPZ
+    using DSP
+    using StatsBase: mean
 
     function f2s(f)
         return 1im * 2.0 * π * f
+    end
+
+    function ar1_high_filter(f_cutoff, f_loop)
+        α = exp(-2π * f_cutoff / f_loop)
+        return [1, -α], [α, -α]
+    end
+
+    function ar1_low_filter(f_cutoff, f_loop)
+        α = exp(-2π * f_cutoff / f_loop)
+        return [1 - α], [1, -α]
     end
 
     mutable struct AOSystem
@@ -17,22 +29,32 @@ module multiwfs
         gain::Float64
         leak::Float64
         fpf::Int64
-        filter_type::String
-        filter_cutoff::Float64
-        α::Float64
+        filter_value::Float64
+        filter_input_history::Vector{Float64}
+        filter_output_history::Vector{Float64}
+        filter_numerator::Vector{Float64}
+        filter_denominator::Vector{Float64}
 
-        function AOSystem(f_loop, frame_delay, gain, leak, fpf, filter_type, filter_cutoff)
+        function AOSystem(f_loop, frame_delay, gain, leak, fpf, filter_numerator, filter_denominator)
             Ts = 1 / f_loop
             frame_delay = floor(frame_delay) + round((frame_delay-floor(frame_delay))*fpf)/fpf
             τ = frame_delay * Ts
-            α = exp(-2π * filter_cutoff / f_loop)
-            new(f_loop, Ts, frame_delay, τ, gain, leak, fpf, filter_type, filter_cutoff, α)
+            new(f_loop, Ts, frame_delay, τ, gain, leak, fpf, 0.0, [], [], filter_numerator, filter_denominator)
         end
     end
 
-    function update_filter_cutoff!(sys, filter_cutoff)
-        sys.filter_cutoff = filter_cutoff
-        sys.α = exp(-2π * filter_cutoff / sys.f_loop)
+    function update_filter!(sys, new_input)
+        pushfirst!(sys.filter_input_history, new_input)
+        if length(sys.filter_input_history) > length(filter_denominator) - 1
+            pop!(sys.filter_input_history)
+        end
+        time_denominator = sum(c * x for (x, c) in zip(sys.filter_input_history, sys.filter_denominator))
+        time_almost_numerator = sum(c * y for (y, c) in zip(sys.filter_output_history[2:end], sys.filter_numerator[2:end]))
+        sys.filter_value = (time_denominator - time_almost_numerator) / sys.filter_numerator[1]
+        pushfirst!(sys.filter_output_history, sys.filter_value)
+        if length(sys.filter_output_history) > length(filter_numerator) - 1
+            pop!(sys.filter_output_history)
+        end
     end
 
     function update_frame_delay!(sys, frame_delay)
@@ -65,13 +87,8 @@ module multiwfs
     end
 
     function Hfilter(ao::AOSystem, s)
-        if ao.filter_type == "high"
-            return ao.α * (1 - exp(-s / ao.f_loop)) / (1 - ao.α * exp(-s / ao.f_loop))
-        elseif ao.filter_type == "low"
-            return (1 - ao.α) / (1 - ao.α * exp(-s / ao.f_loop))
-        else
-            return 1
-        end
+        z = exp(s)
+        return sum([z^(i-1) * c for (i, c) in enumerate(ao.filter_numerator)]) / sum([z^(i-1) * c for (i, c) in enumerate(ao.filter_denominator)])
     end
 
     function Hol(ao::AOSystem, s::Complex)
@@ -192,7 +209,7 @@ module multiwfs
         gain_map
     end    
 
-    function psd(x)
+    function psd(x, f_loop)
         noverlap = 2^7# 2^(Int(floor(log2(length(x)/4)))-2)
         n = div(length(x), 8)
         return welch_pgram(x, n, noverlap; fs=f_loop)
@@ -202,8 +219,9 @@ module multiwfs
         plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power"; kwargs...)
     end
     
-    function integrator_control(open_loop, gain, leak, update_every; hpf_gain=0.0, delay_frames=1)
-        closed_loop = zeros(length(open_loop))
+    function integrator_control(sys, open_loop, gain, leak, update_every; hpf_gain=0.0, delay_frames=1)
+        N = length(open_loop)
+        closed_loop = zeros(N)
         closed_loop[1] = open_loop[1]
         command = 0.0
         average_buffer = []
@@ -211,14 +229,14 @@ module multiwfs
         for i in 2:N
             push!(average_buffer, closed_loop[i-1])
             if i > 2 + delay_frames
-                hpf_val = sys_high.α * hpf_val + sys_high.α * (closed_loop[i-1-delay_frames] - closed_loop[i-2-delay_frames])
+                update_filter!(sys, closed_loop[i-delay_frames])
             end
             if i % update_every == 0
                 command = leak * command - gain * mean(average_buffer)
                 average_buffer = []
             end
             # hpf is stuck to update_every = 1
-            command -= hpf_gain * hpf_val 
+            command -= hpf_gain * sys.filter_value 
             closed_loop[i] = open_loop[i] + command
         end
         closed_loop

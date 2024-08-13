@@ -1,22 +1,20 @@
 using multiwfs
 using Plots
 using Distributions
-using DSP
-using StatsBase: mean
-using Base.GC: gc
 using SciPy
+using multiwfs: ar1_high_filter, ar1_low_filter
 
 # assess Ben's 1 rad rms criterion for AR(1), Cheb2, Cheb4
 
-# put in frame delay to time domain simulation - add a buffer for the WFS
-
 begin
     f_cutoff = 3.0
+    f_loop = 200.0
+    ar1_high = ar1_high_filter(f_cutoff, f_loop)
     # parameters are:
-    # f_loop, frame_delay, gain, leak, fpf, filter_type, filter_cutoff
-    sys_high = AOSystem(200.0, 1.0, 0.15, 0.999, 10, "high", f_cutoff)
-    sys_test = AOSystem(200.0, 0.0, 0.3, 0.999, 10, "high", f_cutoff)
-    sys_slow = AOSystem(20.0, 0.0, 1.0, 0.999, 1, "high", f_cutoff)
+    # f_loop, frame_delay, gain, leak, fpf
+    sys_high = AOSystem(f_loop, 1.0, 0.15, 0.999, 10, ar1_high[1], ar1_high[2])
+    sys_test = AOSystem(f_loop, 0.0, 0.3, 0.999, 10, [1], [1])
+    sys_slow = AOSystem(f_loop / 10, 0.0, 1.0, 0.999, 1, [1], [1])
 end;
 
 
@@ -46,7 +44,7 @@ begin
     const open_loop = open_loop_t
 end
 
-ol_psd_p = psd(open_loop)
+ol_psd_p = psd(open_loop, f_loop)
 f, ol_psd = freq(ol_psd_p)[2:end], power(ol_psd_p)[2:end]
 etf_regular = power(psd(integrator_control(open_loop, 0.3, 0.999, 1, delay_frames=0)))[2:end] ./ ol_psd
 etf_slow = power(psd(integrator_control(open_loop, 1.0, 0.999, 10, delay_frames=1)))[2:end] ./ ol_psd
