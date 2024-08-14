@@ -112,10 +112,12 @@ class MPC(Controller):
             ut = self.G_opt @ xlast
             cost += cp.quad_form(xtp1, self.Q) + cp.quad_form(ut, self.R)
             constr += [xtp1 == self.A @ xlast + self.B @ ut]
+            constr += [cp.abs(xtp1) <= 2.5]
             # this is where some constraint on GM and PM would go
             xlast = xtp1
         self.problem = cp.Problem(cp.Minimize(cost), constr)
         self.problem.solve()
+        self.L = self.G_opt.value
         
     def measure(self):
         return self.C @ self.x + self.D @ self.u
@@ -132,10 +134,15 @@ class MPC(Controller):
         
     @property
     def u(self):
-        return self.G_opt.value @ self.x
+        return self.L @ self.x
         
     def control_law(self):
-        self.problem.solve()
+        try:
+            self.problem.solve()
+            if self.G_opt.value is not None and not np.any(np.isnan(self.G_opt.value)):
+                self.L = self.G_opt.value
+        except cp.SolverError:
+            pass
         return self.u
 
     def observe_law(self, measurement):

@@ -27,7 +27,7 @@ observation_two = StateSpaceObservation(
 )
 
 for observation in [observation_one]:
-    mpc = MPC(dynamics, observation, horizon=1)
+    mpc = MPC(dynamics, observation)
     lqg = LQG(dynamics, observation)
     controllers = [openloop, integrator, lqg, mpc]
     sim_res = simulate(dynamics, observation, controllers, nsteps=1000);
