@@ -1,3 +1,5 @@
+using NPZ
+
 function nyquist_and_margins(sys)
     f = (0.001, sys.f_loop / 2 + 0.001)
     linfreq = range(minimum(f), maximum(f), length=2001)
@@ -57,17 +59,19 @@ function zero_db_bandwidth(sys)
     end
 end    
 
-function gain_map(sys; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:0.1:1.0, save=true)
+function ar1_gain_map(sys, filter_type; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:0.1:1.0, save=true)
     gain_map = zeros(length(f_cutoffs), length(delays));
     @showprogress @threads for (i, fc) in collect(enumerate(f_cutoffs))
         for (j, d) in enumerate(delays)
-            tsys = AOSystem(sys.f_loop, d, sys.gain, sys.leak, sys.fpf, sys.filter_type, fc)
+            tsys = AOSystem(sys.f_loop, d, sys.gain, sys.leak, sys.fpf, ar1_filter(fc, sys.f_loop, filter_type))
             search_gain!(tsys)
             gain_map[i,j] = tsys.gain
         end
     end
     if save
-        npzwrite("data/gainmap_loopfreq_$(sys.f_loop)_ftype_$(sys.filter_type).npy", gain_map)
+        npzwrite("data/gainmap_loopfreq_$(sys.f_loop)_ftype_$filter_type.npy", gain_map)
     end
     gain_map
 end
+
+export ar1_gain_map, search_gain!, zero_db_bandwidth

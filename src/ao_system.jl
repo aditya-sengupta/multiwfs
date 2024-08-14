@@ -46,7 +46,7 @@ function Hcont(ao::AOSystem, s)
 end
 
 function Hfilter(ao::AOSystem, s)
-    return transfer_function(ao.zpkfilter, s)
+    return transfer_function(ao.zpkfilter, s ./ ao.f_loop)
 end
 
 function Hol(ao::AOSystem, s::Complex)

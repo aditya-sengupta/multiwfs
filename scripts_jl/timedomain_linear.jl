@@ -1,32 +1,26 @@
 using multiwfs
 using Plots
 using Distributions
-using SciPy
+using DSP
 using multiwfs: ar1_high_filter, ar1_low_filter
+
+include("filter_setup.jl")
 
 # assess Ben's 1 rad rms criterion for AR(1), Cheb2, Cheb4
 
 begin
     f_cutoff = 3.0
     f_loop = 200.0
-    ar1_high = ar1_high_filter(f_cutoff, f_loop)
+    ar1_high = ar1_filter(f_cutoff, f_loop, "high")
+    no_filter = ZPKFilter(0, 0, 1)
     # parameters are:
     # f_loop, frame_delay, gain, leak, fpf
-    sys_high = AOSystem(f_loop, 1.0, 0.15, 0.999, 10, ar1_high[1], ar1_high[2])
-    sys_test = AOSystem(f_loop, 0.0, 0.3, 0.999, 10, [1], [1])
-    sys_slow = AOSystem(f_loop / 10, 0.0, 1.0, 0.999, 1, [1], [1])
+    sys_high = AOSystem(f_loop, 1.0, 0.15, 0.999, 10, cheb2_high)
+    sys_test = AOSystem(f_loop, 0.0, 0.3, 0.999, 10, no_filter)
+    sys_slow = AOSystem(f_loop / 10, 0.0, 1.0, 0.999, 1, no_filter)
 end;
 
 
-ch_order = 4
- # order of the filter
-cheby_cutoff_fac = 0.03
-ch_rp = -20 * log10(0.95)
-@assert 0 < cheby_cutoff_fac < 1
-ch_omegan = [cheby_cutoff_fac] # critical frequencies, nyquist = 1
-hp_ch_numer, hp_ch_denom = signal.cheby1(ch_order, ch_rp, ch_omegan, "highpass", output="zpk")
-w, h = signal.freqs(hp_ch_numer, hp_ch_denom)
-plot(w, 20 .* log10.(abs.(h)), xscale=:log10, xlabel="Frequency (Hz)", xticks=[1e-2, 1e-1, 1e0, 1e1, 1e2], ylabel="20 log10(power) (dB)")
 # order 2 should behave similarly to the AR
 # combined TF should have a saddle in both 2 and 4
 # order 4 should have no improvement
@@ -46,9 +40,9 @@ end
 
 ol_psd_p = psd(open_loop, f_loop)
 f, ol_psd = freq(ol_psd_p)[2:end], power(ol_psd_p)[2:end]
-etf_regular = power(psd(integrator_control(open_loop, 0.3, 0.999, 1, delay_frames=0)))[2:end] ./ ol_psd
-etf_slow = power(psd(integrator_control(open_loop, 1.0, 0.999, 10, delay_frames=1)))[2:end] ./ ol_psd
-etf_filt = power(psd(integrator_control(open_loop, 1.0, 0.999, 10, hpf_gain=0.15, delay_frames=1)))[2:end] ./ ol_psd
+etf_regular = power(psd(integrator_control(sys_test, open_loop, 0.3, 0.999, 1, delay_frames=1), f_loop))[2:end] ./ ol_psd
+etf_slow = power(psd(integrator_control(sys_slow, open_loop, 1.0, 0.999, 10, delay_frames=1), f_loop))[2:end] ./ ol_psd
+etf_filt = power(psd(integrator_control(sys_high, open_loop, 1.0, 0.999, 10, hpf_gain=0.15, delay_frames=1), f_loop))[2:end] ./ ol_psd
 
 begin
     plot(title="Estimated ETFs - Slow WFS @ 20 Hz", legend=:bottomright, xticks=[1e-1, 1e0, 1e1, 1e2])

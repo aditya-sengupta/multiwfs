@@ -1,13 +1,11 @@
-using multiwfs
-using multiwfs: Hol, Hol_unfiltered, Hfilter
-using Plots
+include("filter_setup.jl")
 
 begin
     f_cutoff = 3.0
     # parameters are:
     # f_loop, frame_delay, gain, leak, fpf, filter_type, filter_cutoff
-    sys_low = AOSystem(200.0, 1.0, 1.0, 0.999, 1, "low", f_cutoff)
-    sys_high = AOSystem(200.0, 0.1, 1.0, 0.999, 10, "high", f_cutoff)
+    sys_low = AOSystem(200.0, 1.0, 1.0, 0.999, 1, ar1_low)
+    sys_high = AOSystem(200.0, 0.1, 1.0, 0.999, 10, ar1_high)
     #search_gain!(sys_low)
     sys_low.gain = 0.3
     #search_gain!(sys_high)

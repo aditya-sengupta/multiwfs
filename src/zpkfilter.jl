@@ -28,11 +28,11 @@ struct ZPKFilter{N}
 end
 
 function output!(zpkf::ZPKFilter{N}, x_n) where N
-    y_n = zeros(N)
+    y_n = zeros(ComplexF64, N)
     for i in 1:N
         k = (i == N ? zpkf.k : 1)
         y_n[i] = zpkf.p[i] * zpkf.prev_y[i] + k * x_n - k * zpkf.z[i] * zpkf.prev_x[i]
-        zpkf.prev_x[i] = x_n[i]
+        zpkf.prev_x[i] = (i > 1 ? y_n[i-1] : x_n)
         zpkf.prev_y[i] = y_n[i]
     end
     return y_n

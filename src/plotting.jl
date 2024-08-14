@@ -13,10 +13,12 @@ function nyquist_plot(sys)
     scatter!([real(nyquist_contour[gain_margin_ind])], [imag(nyquist_contour[gain_margin_ind])], label="Gain margin = $(round(gm, digits=2))", color=:grey)
     plot!([-2,0,-2], [-2,0,2], ls=:dash, label="Phase margin cutoff", color=4)
     plot!(xunit, yunit, ls=:dash, label=nothing, color=success)
-    scatter!([real(nyquist_contour[phase_margin_ind])], [imag(nyquist_contour[phase_margin_ind])], label="Phase margin = $(round(pm, digits=2))", color=4, title="$(uppercase((sys.filter_type[1])))PF, f_cutoff=$(sys.filter_cutoff) Hz, delay=$(sys.frame_delay)")
+    scatter!([real(nyquist_contour[phase_margin_ind])], [imag(nyquist_contour[phase_margin_ind])], label="Phase margin = $(round(pm, digits=2))", color=4)
     p
 end
 
 function plot_psd_p!(f, p; kwargs...)
     plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power"; kwargs...)
 end
+
+export nyquist_plot, plot_psd_p!

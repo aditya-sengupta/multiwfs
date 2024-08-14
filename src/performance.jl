@@ -1,4 +1,5 @@
 using DSP
+using StatsBase: mean
 
 function psd(x, f_loop)
     noverlap = 2^7# 2^(Int(floor(log2(length(x)/4)))-2)
@@ -8,22 +9,22 @@ end
 
 function integrator_control(sys, open_loop, gain, leak, update_every; hpf_gain=0.0, delay_frames=1)
     N = length(open_loop)
-    closed_loop = zeros(N)
+    closed_loop = zeros(ComplexF64,N)
     closed_loop[1] = open_loop[1]
     command = 0.0
     average_buffer = []
-    hpf_val = 0.0
     for i in 2:N
         push!(average_buffer, closed_loop[i-1])
+        y_n = sys.zpkfilter.prev_y[1]
         if i > 2 + delay_frames
-            update_filter!(sys, closed_loop[i-delay_frames])
+            y_n = output!(sys.zpkfilter, closed_loop[i-delay_frames])[1]
         end
         if i % update_every == 0
             command = leak * command - gain * mean(average_buffer)
             average_buffer = []
         end
         # hpf is stuck to update_every = 1
-        command -= hpf_gain * sys.filter_value 
+        command -= hpf_gain * y_n
         closed_loop[i] = open_loop[i] + command
     end
     closed_loop
