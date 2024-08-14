@@ -8,5 +8,4 @@ plt.rcParams.update({
     "axes.formatter.use_mathtext" : True
 })
 
-from .multiwfs import AOSystem
 from .dynamics import StateSpaceDynamics

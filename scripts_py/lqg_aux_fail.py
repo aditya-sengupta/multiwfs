@@ -31,14 +31,16 @@ Ccost[1] = 0.0
 lqg.Q = Ccost.T @ Ccost
 lqg.Pcon = solve_dare(dynamics.A, dynamics.B, lqg.Q, lqg.R, S=lqg.S)
 lqg.L = -np.linalg.pinv(lqg.R + dynamics.B.T @ lqg.Pcon @ dynamics.B) @ (lqg.S.T + dynamics.B.T @ lqg.Pcon @ dynamics.A)
-sim = simulate(dynamics, observation, [openloop, integrator, lqg]);
-
+mpc = MPC(dynamics, observation, Q=lqg.Q, R=lqg.R)
+sim = simulate(dynamics, observation, [openloop, integrator, lqg, mpc]);
 # %%
 rms(sim["LQG"]["noiseless_measurements"][:,0]) # error on the science WFS
 # %%
 rms(sim["LQG"]["noiseless_measurements"][:,1])
 # error on the auxiliary WFS
 # %%
-
+rms(sim["MPC"]["noiseless_measurements"][:,0]) # error on the science WFS
+# %%
+rms(sim["MPC"]["noiseless_measurements"][:,1])
 
 # %%

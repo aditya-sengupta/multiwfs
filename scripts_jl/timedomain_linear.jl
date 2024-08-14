@@ -2,7 +2,6 @@ using multiwfs
 using Plots
 using Distributions
 using DSP
-using multiwfs: ar1_high_filter, ar1_low_filter
 
 include("filter_setup.jl")
 
@@ -37,12 +36,17 @@ begin
     end
     const open_loop = open_loop_t
 end
+multiwfs.reset!(sys_high.zpkfilter)
+plot(integrator_control(sys_high, open_loop, 1.0, 0.999, 10, hpf_gain=0.15, delay_frames=1))
 
-ol_psd_p = psd(open_loop, f_loop)
-f, ol_psd = freq(ol_psd_p)[2:end], power(ol_psd_p)[2:end]
-etf_regular = power(psd(integrator_control(sys_test, open_loop, 0.3, 0.999, 1, delay_frames=1), f_loop))[2:end] ./ ol_psd
-etf_slow = power(psd(integrator_control(sys_slow, open_loop, 1.0, 0.999, 10, delay_frames=1), f_loop))[2:end] ./ ol_psd
-etf_filt = power(psd(integrator_control(sys_high, open_loop, 1.0, 0.999, 10, hpf_gain=0.15, delay_frames=1), f_loop))[2:end] ./ ol_psd
+begin
+    multiwfs.reset!(sys_high.zpkfilter)
+    ol_psd_p = psd(open_loop, f_loop)
+    f, ol_psd = freq(ol_psd_p)[2:end], power(ol_psd_p)[2:end]
+    etf_regular = power(psd(integrator_control(sys_test, open_loop, 0.3, 0.999, 1, delay_frames=1), f_loop))[2:end] ./ ol_psd
+    etf_slow = power(psd(integrator_control(sys_slow, open_loop, 1.0, 0.999, 10, delay_frames=1), f_loop))[2:end] ./ ol_psd
+    etf_filt = power(psd(integrator_control(sys_high, open_loop, 1.0, 0.999, 10, hpf_gain=0.15, delay_frames=1), f_loop))[2:end] ./ ol_psd
+end
 
 begin
     plot(title="Estimated ETFs - Slow WFS @ 20 Hz", legend=:bottomright, xticks=[1e-1, 1e0, 1e1, 1e2])

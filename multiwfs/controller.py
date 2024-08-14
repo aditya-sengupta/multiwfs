@@ -83,12 +83,18 @@ class LQG(Controller):
         self.update(measurement)
         
 class MPC(Controller):
-    def __init__(self, dyn, obs, name="MPC", horizon=1):
+    def __init__(self, dyn, obs, name="MPC", horizon=1, Q=None, R=None, S=None):
         self.name = name
         self.horizon = horizon
         self.A, self.B, self.C, self.D = dyn.A, dyn.B, obs.C, obs.D
-        self.Q = obs.C.T @ obs.C
-        self.R = obs.D.T @ obs.D
+        if Q is None:
+            self.Q = obs.C.T @ obs.C
+        else:
+            self.Q = Q
+        if R is None:
+            self.R = obs.D.T @ obs.D
+        else:
+            self.R = R
         self.S = obs.C.T @ obs.D
         self.x_opt = cp.Variable((dyn.state_size, horizon))
         self.G_opt = cp.Variable((dyn.input_size, dyn.state_size))

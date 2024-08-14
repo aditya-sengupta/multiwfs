@@ -28,19 +28,21 @@ struct ZPKFilter{N}
 end
 
 function output!(zpkf::ZPKFilter{N}, x_n) where N
-    y_n = zeros(ComplexF64, N)
+    y_n = 0.0 + 0.0im # intermediate results can be complex but final ones shouldn't be!
+    
     for i in 1:N
         k = (i == N ? zpkf.k : 1)
-        y_n[i] = zpkf.p[i] * zpkf.prev_y[i] + k * x_n - k * zpkf.z[i] * zpkf.prev_x[i]
-        zpkf.prev_x[i] = (i > 1 ? y_n[i-1] : x_n)
-        zpkf.prev_y[i] = y_n[i]
+        y_n = zpkf.p[i] * zpkf.prev_y[i] + k * x_n - k * zpkf.z[i] * zpkf.prev_x[i]
+        zpkf.prev_x[i] = x_n
+        zpkf.prev_y[i] = y_n
+        x_n = y_n
     end
-    return y_n
+    return real(y_n)
 end
 
 function reset!(zpkf::ZPKFilter{N}) where N
-    zpkf.prev_x = @MVector zeros(N)
-    zpkf.prev_y = @MVector zeros(N)
+    zpkf.prev_x[:] = zeros(N)
+    zpkf.prev_y[:] = zeros(N)
 end
 
 function transfer_function(zpkf::ZPKFilter, s)
