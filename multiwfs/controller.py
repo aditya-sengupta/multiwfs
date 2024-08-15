@@ -83,9 +83,10 @@ class LQG(Controller):
         self.update(measurement)
         
 class MPC(Controller):
-    def __init__(self, dyn, obs, name="MPC", horizon=1, Q=None, R=None, S=None):
+    def __init__(self, dyn, obs, name="MPC", horizon=1, Q=None, R=None, S=None, u_lim=np.inf):
         self.name = name
         self.horizon = horizon
+        self.u_lim = u_lim
         self.A, self.B, self.C, self.D = dyn.A, dyn.B, obs.C, obs.D
         if Q is None:
             self.Q = obs.C.T @ obs.C
@@ -97,7 +98,7 @@ class MPC(Controller):
             self.R = R
         self.S = obs.C.T @ obs.D
         self.x_opt = cp.Variable((dyn.state_size, horizon))
-        self.G_opt = cp.Variable((dyn.input_size, dyn.state_size))
+        self.u_opt = cp.Variable((dyn.input_size, horizon))
         self.Pobs = solve_dare(dyn.A.T, obs.C.T, dyn.W, obs.V)
         self.K = self.Pobs @ obs.C.T @ np.linalg.pinv(obs.C @ self.Pobs @ obs.C.T + obs.V)
         cost = 0
@@ -107,17 +108,12 @@ class MPC(Controller):
         xlast = self.x_curr
         for t in range(self.horizon):
             xtp1 = self.x_opt[:,t]
-            # double check timestepping here
-            # do we want u = Gx, or u = GAx, or ...
-            ut = self.G_opt @ xlast
+            ut = self.u_opt[:,t]
             cost += cp.quad_form(xtp1, self.Q) + cp.quad_form(ut, self.R)
             constr += [xtp1 == self.A @ xlast + self.B @ ut]
-            constr += [cp.abs(xtp1) <= 2.5]
-            # this is where some constraint on GM and PM would go
             xlast = xtp1
         self.problem = cp.Problem(cp.Minimize(cost), constr)
         self.problem.solve()
-        self.L = self.G_opt.value
         
     def measure(self):
         return self.C @ self.x + self.D @ self.u
@@ -134,16 +130,10 @@ class MPC(Controller):
         
     @property
     def u(self):
-        return self.L @ self.x
+        return self.u_opt.value[:,0]
         
     def control_law(self):
-        try:
-            self.problem.solve()
-            if self.G_opt.value is not None and not np.any(np.isnan(self.G_opt.value)):
-                self.L = self.G_opt.value
-        except cp.SolverError:
-            pass
-        return self.u
+        return np.maximum(-self.u_lim, np.minimum(self.u, self.u_lim))
 
     def observe_law(self, measurement):
         self.predict()

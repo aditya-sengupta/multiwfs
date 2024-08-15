@@ -82,7 +82,7 @@ class StateSpaceObservation:
     def __repr__(self):
         return f"State space observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
 
-def simulate(dynamics, observation, controllers, nsteps=10000, plot=True):
+def simulate(dynamics, observation, controllers, nsteps=10000, plot=True, u_lim=np.inf):
     states_one = np.zeros((nsteps, dynamics.state_size))
     states_one[0] = dynamics.process_dist.rvs()
     sim = {
@@ -102,7 +102,7 @@ def simulate(dynamics, observation, controllers, nsteps=10000, plot=True):
             s, i, m, nm = sim_c["states"], sim_c["inputs"], sim_c["measurements"], sim_c["noiseless_measurements"]
             nm[j-1] = observation.C @ s[j-1] + observation.D @ i[j-1]
             m[j-1] = nm[j-1] + measure_noise
-            i[j] = c(m[j-1])
+            i[j] = np.maximum(-u_lim, np.minimum(c(m[j-1]), u_lim))
             s[j] = dynamics.A @ s[j-1] + dynamics.B @ i[j] + process_noise
         
     for c in controllers:
