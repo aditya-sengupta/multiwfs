@@ -1,21 +1,42 @@
 using NPZ
+using Roots
 
-function nyquist_and_margins(sys; d=0.001)
+function zero_crossings(f, x, y)
+    crossing_regions = findall(x -> x < 0, y[1:end-1] .* y[2:end])
+    zero_vals = zeros(length(crossing_regions))
+    for (i, crossing_idx) in enumerate(crossing_regions)
+        zero_vals[i] = fzero(f, (x[crossing_idx], x[crossing_idx+1]))
+    end
+    zero_vals
+end
+
+"""
+Takes in a complex number z and returns its angle relative to -1 in either direction, in degrees.
+-1-1im and -1+1im should both return 45.
+"""
+function angle_relative_to_minus1(z)
+    return 180 - abs(rad2deg(angle(z)))
+end
+
+function nyquist_and_margins(sys)
     f = (0.001, sys.f_loop / 2 + 0.001)
-    linfreq = range(minimum(f), maximum(f), length=2001)
-    linfreq = vcat(-reverse(linfreq), linfreq)
+    gm, gm_point, pm, pm_point = Inf, nothing, 180, nothing
+    oneside_freq = range(minimum(f), maximum(f), length=2001)
+    linfreq = vcat(-reverse(oneside_freq), oneside_freq)
     nyquist_contour = Hol.(Ref(sys), linfreq)
-    gain_margin_points = findall(abs.(imag(nyquist_contour)) .< d)
-    @assert length(gain_margin_points) > 0
-    gain_margin_ind = argmin(real(nyquist_contour)[gain_margin_points])
-    gm = -1 / real(nyquist_contour[gain_margin_points][gain_margin_ind])
-    phase_margin_circle_distance = @. abs(abs(nyquist_contour) - 1)
-    phase_margin_points = []
-    phase_margin_points = findall(phase_margin_circle_distance .< d)
-    phase_margin_minus1_distance = @. abs((real(nyquist_contour) + 1)^2 + imag(nyquist_contour)^2)
-    phase_margin_ind = argmin(phase_margin_minus1_distance[phase_margin_points])
-    pm = abs(rad2deg((angle(nyquist_contour[phase_margin_points][phase_margin_ind]) - π) % (2π)))
-    return nyquist_contour, gm, gain_margin_points[gain_margin_ind], pm, phase_margin_points[phase_margin_ind]
+    imag_axis_crossings = zero_crossings(freq -> imag(Hol(sys, freq)), linfreq, imag.(nyquist_contour))
+    gm_candidate_points = Hol.(Ref(sys), imag_axis_crossings)
+    if length(gm_candidate_points) > 0
+        gm_point = minimum(real(x) for x in gm_candidate_points if !isnan(x))
+        gm = -1 / real(gm_point)
+    end
+    unit_circle_crossings = zero_crossings(freq -> abs2(Hol(sys, freq)) - 1, linfreq, abs2.(nyquist_contour) .- 1)
+    pm_candidate_points = Hol.(Ref(sys), unit_circle_crossings)
+    if length(pm_candidate_points) > 0
+        pm_point = pm_candidate_points[argmin(angle_relative_to_minus1.(pm_candidate_points))]
+        pm = angle_relative_to_minus1(pm_point)
+    end
+    return nyquist_contour, gm, gm_point, pm, pm_point
 end
 
 function is_stable(sys)
