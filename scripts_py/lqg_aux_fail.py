@@ -1,9 +1,10 @@
 # %%
 import numpy as np
-from multiwfs.utils import rms
+from multiwfs.utils import rms, genpsd
 from multiwfs.dare import solve_dare
 from multiwfs.dynamics import StateSpaceDynamics, StateSpaceObservation, simulate
 from multiwfs.controller import Openloop, Integrator, LQG, MPC
+from matplotlib import pyplot as plt
 
 np.random.seed(1)
 
@@ -29,18 +30,30 @@ lqg = LQG(dynamics, observation)
 Ccost = np.copy(lqg.C)
 Ccost[1] = 0.0
 lqg.Q = Ccost.T @ Ccost
+u_lim = 1.0
 lqg.Pcon = solve_dare(dynamics.A, dynamics.B, lqg.Q, lqg.R, S=lqg.S)
 lqg.L = -np.linalg.pinv(lqg.R + dynamics.B.T @ lqg.Pcon @ dynamics.B) @ (lqg.S.T + dynamics.B.T @ lqg.Pcon @ dynamics.A)
-mpc = MPC(dynamics, observation, Q=lqg.Q, R=lqg.R)
-sim = simulate(dynamics, observation, [openloop, integrator, lqg, mpc], nsteps=10000);
+mpc = MPC(dynamics, observation, Q=lqg.Q, R=lqg.R, u_lim=u_lim, y_limidx=[1], y_limval=[1.0 - 1e-3])
+sim = simulate(dynamics, observation, [openloop, integrator, lqg, mpc], nsteps=10000, u_lim=u_lim);
+
 # %%
-rms(sim["LQG"]["noiseless_measurements"][:,0]) # error on the science WFS
+lqg_sci, lqg_aux = sim["LQG"]["noiseless_measurements"].T
+mpc_sci, mpc_aux = sim["MPC"]["noiseless_measurements"].T
 # %%
-rms(sim["LQG"]["noiseless_measurements"][:,1])
+rms(lqg_sci) # error on the science WFS
+# %%
+rms(lqg_aux)
 # error on the auxiliary WFS
 # %%
-rms(sim["MPC"]["noiseless_measurements"][:,0]) # error on the science WFS
+rms(mpc_sci) # error on the science WFS
 # %%
-rms(sim["MPC"]["noiseless_measurements"][:,1])
-
+rms(mpc_aux)
+# %%
+plt.loglog(*genpsd(lqg_sci, dt=1e-3), label="LQG: science WFS", color="r")
+plt.loglog(*genpsd(mpc_sci, dt=1e-3), label="MPC: science WFS", color="b")
+plt.loglog(*genpsd(lqg_aux, dt=1e-3), label="LQG: auxiliary WFS", ls="--", color="r")
+plt.loglog(*genpsd(mpc_aux, dt=1e-3), label="MPC: auxiliary WFS", ls="--", color="b")
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("Power")
+plt.legend()
 # %%

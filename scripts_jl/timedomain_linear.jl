@@ -14,11 +14,10 @@ begin
     no_filter = ZPKFilter(0, 0, 1)
     # parameters are:
     # f_loop, frame_delay, gain, leak, fpf
-    sys_high = AOSystem(f_loop, 1.0, 0.15, 0.999, 10, cheb2_high)
+    sys_high = AOSystem(f_loop, 1.0, 0.45, 0.999, 10, ar1_high)
     sys_test = AOSystem(f_loop, 0.0, 0.3, 0.999, 10, no_filter)
     sys_slow = AOSystem(f_loop / 10, 0.0, 1.0, 0.999, 1, no_filter)
 end;
-
 
 # order 2 should behave similarly to the AR
 # combined TF should have a saddle in both 2 and 4
@@ -56,4 +55,11 @@ begin
     plot_psd_p!(f, abs2.(1 ./ (1 .+ Hol_unfiltered.(Ref(sys_test), f))), color=:black,  label=nothing)
     plot_psd_p!(f, abs2.(1 ./ (1 .+ Hol_unfiltered.(Ref(sys_slow), f))), color=:black,  label=nothing)
     plot_psd_p!(f, abs2.(1 ./ (1 .+ Hol_unfiltered.(Ref(sys_slow), f) .+ Hol.(Ref(sys_high), f))), color=:black,  label=nothing)
+end
+
+ar1_low = ar1_filter(3.0, f_loop, "low")
+
+begin
+    plot(f, abs2.(1 ./ (1 .+ Hol_unfiltered.(Ref(sys_slow), f) .* transfer_function.(Ref(ar1_low), 2π * im * f / f_loop) .+ Hol.(Ref(sys_high), f))), xscale=:log10, yscale=:log10, label="Low + high on the separate WFSs", xticks=[1e-1, 1e0, 1e1, 1e2])
+    plot_psd_p!(f, abs2.(1 ./ (1 .+ Hol_unfiltered.(Ref(sys_slow), f) .+ Hol.(Ref(sys_high), f))), label="High pass on the fast WFS", legend=:bottomright)
 end

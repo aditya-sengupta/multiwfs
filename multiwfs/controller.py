@@ -83,7 +83,7 @@ class LQG(Controller):
         self.update(measurement)
         
 class MPC(Controller):
-    def __init__(self, dyn, obs, name="MPC", horizon=1, Q=None, R=None, S=None, u_lim=np.inf):
+    def __init__(self, dyn, obs, name="MPC", horizon=1, Q=None, R=None, S=None, u_lim=np.inf, y_limidx=[], y_limval=[]):
         self.name = name
         self.horizon = horizon
         self.u_lim = u_lim
@@ -111,6 +111,10 @@ class MPC(Controller):
             ut = self.u_opt[:,t]
             cost += cp.quad_form(xtp1, self.Q) + cp.quad_form(ut, self.R)
             constr += [xtp1 == self.A @ xlast + self.B @ ut]
+            xtp2 = self.A @ xtp1 + self.B @ ut
+            obs_lim1 = cp.abs(self.C @ xtp1)
+            for (idx, val) in zip(y_limidx, y_limval):
+                constr += [obs_lim1[idx] <= val]
             xlast = xtp1
         self.problem = cp.Problem(cp.Minimize(cost), constr)
         self.problem.solve()
@@ -130,11 +134,29 @@ class MPC(Controller):
         
     @property
     def u(self):
-        return self.u_opt.value[:,0]
+        u = self.u_opt.value
+        if u is not None:
+            self.u_prev = u[:,0]
+        return self.u_prev
         
     def control_law(self):
+        # at the current time, you're constrained on state = the KF-recovered state
+        # due to the separation principle, this is the best we can do
+        # after that, we assume x[next] = Ax[curr] + Bu[curr]
+        # LQG doesn't look at W or V anyway so that's fine
+        # and we try and minimize x^T Qx + x^T Su + u^T Ru
+        self.problem.solve()
+        try:
+            assert np.abs((self.C @ (self.A @ self.x + self.B @ self.u))[1]) <= 1.0
+        except AssertionError:
+            print(self.problem.status)
+            print("curr state", self.x)
+            print("expected state", self.A @ self.x + self.B @ self.u)
+            print("expected obs", self.C @ (self.A @ self.x + self.B @ self.u))
         return np.maximum(-self.u_lim, np.minimum(self.u, self.u_lim))
 
     def observe_law(self, measurement):
         self.predict()
         self.update(measurement)
+        
+        

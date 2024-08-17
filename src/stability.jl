@@ -1,18 +1,21 @@
 using NPZ
 
-function nyquist_and_margins(sys)
+function nyquist_and_margins(sys; d=0.001)
     f = (0.001, sys.f_loop / 2 + 0.001)
     linfreq = range(minimum(f), maximum(f), length=2001)
     linfreq = vcat(-reverse(linfreq), linfreq)
     nyquist_contour = Hol.(Ref(sys), linfreq)
-    gain_margin_points = findall(abs.(imag(nyquist_contour)) .< 0.001)
+    gain_margin_points = findall(abs.(imag(nyquist_contour)) .< d)
     @assert length(gain_margin_points) > 0
     gain_margin_ind = argmin(real(nyquist_contour)[gain_margin_points])
     gm = -1 / real(nyquist_contour[gain_margin_points][gain_margin_ind])
-    phase_margin_points = @. abs(real(nyquist_contour)^2 + imag(nyquist_contour)^2 - 1)
-    phase_margin_ind = argmin(phase_margin_points)
-    pm = abs(rad2deg((angle(nyquist_contour[phase_margin_ind]) - π) % (2π)))
-    return nyquist_contour, gm, gain_margin_points[gain_margin_ind], pm, phase_margin_ind
+    phase_margin_circle_distance = @. abs(abs(nyquist_contour) - 1)
+    phase_margin_points = []
+    phase_margin_points = findall(phase_margin_circle_distance .< d)
+    phase_margin_minus1_distance = @. abs((real(nyquist_contour) + 1)^2 + imag(nyquist_contour)^2)
+    phase_margin_ind = argmin(phase_margin_minus1_distance[phase_margin_points])
+    pm = abs(rad2deg((angle(nyquist_contour[phase_margin_points][phase_margin_ind]) - π) % (2π)))
+    return nyquist_contour, gm, gain_margin_points[gain_margin_ind], pm, phase_margin_points[phase_margin_ind]
 end
 
 function is_stable(sys)

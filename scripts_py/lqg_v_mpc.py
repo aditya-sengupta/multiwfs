@@ -20,9 +20,9 @@ observation = StateSpaceObservation(
     np.array([[1e-2]]) # measure covariance
 )
 
-u_lim = 2.5
+u_lim = 1.0
 mpc = MPC(dynamics, observation, u_lim=u_lim)
 lqg = LQG(dynamics, observation)
 controllers = [openloop, integrator, lqg, mpc]
-sim_res = simulate(dynamics, observation, controllers, nsteps=1000, u_lim=u_lim);
+sim_res = simulate(dynamics, observation, controllers, nsteps=10000, u_lim=u_lim);
 # %%

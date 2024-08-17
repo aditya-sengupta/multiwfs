@@ -1,8 +1,8 @@
 using Plots
 
-function nyquist_plot(sys)
+function nyquist_plot(sys; d=0.2)
     success = :green
-    nyquist_contour, gm, gain_margin_ind, pm, phase_margin_ind = nyquist_and_margins(sys)
+    nyquist_contour, gm, gain_margin_ind, pm, phase_margin_ind = nyquist_and_margins(sys; d=d)
     p = plot(real(nyquist_contour), imag(nyquist_contour), xlim=(-1.1,1.1), ylim=(-1.1,1.1), aspect_ratio=:equal, legend=:outertopright, label="Nyquist plot")
     phasegrid = range(-π, π, length=500)
     xunit, yunit = cos.(phasegrid), sin.(phasegrid)
