@@ -18,8 +18,17 @@ function angle_relative_to_minus1(z)
     return 180 - abs(rad2deg(angle(z)))
 end
 
+function Hol(systems::Vector{AOSystem}, f)
+    return sum(Hol(sys, f) for sys in systems)
+end
+
 function nyquist_and_margins(sys)
-    f = (0.001, sys.f_loop / 2 + 0.001)
+    if sys isa Vector
+        f_loop = maximum(s.f_loop for s in sys)
+    else
+        f_loop = sys.f_loop
+    end
+    f = (0.001, f_loop / 2 + 0.001)
     gm, gm_point, pm, pm_point = Inf, nothing, 180, nothing
     oneside_freq = range(minimum(f), maximum(f), length=2001)
     linfreq = vcat(-reverse(oneside_freq), oneside_freq)
@@ -37,6 +46,11 @@ function nyquist_and_margins(sys)
         pm = angle_relative_to_minus1(pm_point)
     end
     return nyquist_contour, gm, gm_point, pm, pm_point
+end
+
+function margins(sys)
+    _, gm, _, pm, _ = nyquist_and_margins(sys)
+    return (gm=gm, pm=pm)
 end
 
 function is_stable(sys)
@@ -98,4 +112,4 @@ function ar1_gain_map(sys, filter_type; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:
     gain_map
 end
 
-export ar1_gain_map, search_gain!, zero_db_bandwidth
+export ar1_gain_map, search_gain!, zero_db_bandwidth, get_nyquist_contour, margins

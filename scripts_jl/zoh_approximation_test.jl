@@ -2,6 +2,7 @@ using multiwfs
 using Plots
 using SciPy
 using Optim: optimize, minimizer, Options
+using Polynomials
 
 function Hzoh_slow(s, slowness=10)
     return (1.0 - exp(-slowness * s)) / (slowness * s)
@@ -35,4 +36,42 @@ begin
     sr = 2π * im * fr / sys_test.f_loop
     plot(fr, abs.(Hzoh_slow.(sr)), xlabel="Frequency (Hz)", label="|Hzoh(f)|")
     plot!(fr, abs.(transfer_function.(Ref(approximating_filter), sr)), label="Approximation")
+end
+
+fromroots(approximating_filter.p).coeffs # denominator, coeffs in descending order
+approximating_filter.k * fromroots(approximating_filter.z).coeffs # numerator
+
+function state_space(zpkfilter::ZPKFilter{N}) where N
+    k = 2N + 1
+    A = zeros(k, k)
+    B = zeros(k, 1)
+    C = zeros(1, k)
+    C[1:(N+1)] = zpkfilter.k * fromroots(zpkfilter.z).coeffs
+    denom_coeffs = fromroots(zpkfilter.p).coeffs
+    C[(N+2):end] = -reverse(denom_coeffs[1:end-1]) ./ denom_coeffs[end]
+    for i in 2:(N+1)
+        A[i,i-1] = 1
+    end
+    A[N+2,:] = C[:]
+    for i in (N+3):k
+        A[i,i-1] = 1
+    end
+    B[1] = 1
+    A, B, C
+end
+
+A, B, C = state_space(approximating_filter)
+
+begin
+    N = 1000
+    ur = rand(N)
+    yr = []
+    x = zeros(size(A, 1))
+    for i in 1:N
+        u = ur[i]
+        x = A*x + B*u
+        push!(yr, (C*x)[1,1])
+    end
+    plot(ur, label="Input")
+    plot!(yr, label="Output")
 end

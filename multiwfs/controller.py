@@ -13,8 +13,9 @@ class Controller(ABC):
     def reset(self):
         pass
 
-    def __call__(self, measurement):
-        self.observe_law(measurement)
+    def __call__(self, measurement, iteration):
+        if hasattr(self, "observe_every") and iteration % self.observe_every == 0:
+            self.observe_law(measurement)
         return self.control_law()
 
     def observe_law(self, measurement):
@@ -52,11 +53,14 @@ class Integrator(Controller):
         return self.u
 
 class LQG(Controller):
-    def __init__(self, dyn, obs, name="LQG"):
+    def __init__(self, dyn, obs, name="LQG", Q=None, R=None, observe_every=1):
         self.name = name
         self.A, self.B, self.C, self.D = dyn.A, dyn.B, obs.C, obs.D
-        Q = self.Q = obs.C.T @ obs.C
-        R = self.R = obs.D.T @ obs.D
+        if Q is None:
+            Q = obs.C.T @ obs.C
+        if R is None:
+            R = obs.D.T @ obs.D
+        self.Q, self.R = Q, R
         S = self.S = obs.C.T @ obs.D
         self.x = np.zeros((dyn.state_size,))
         self.u = np.zeros((dyn.input_size,))
@@ -64,6 +68,7 @@ class LQG(Controller):
         self.Pcon = solve_dare(dyn.A, dyn.B, Q, R, S=S)
         self.K = self.Pobs @ obs.C.T @ np.linalg.pinv(obs.C @ self.Pobs @ obs.C.T + obs.V)
         self.L = -np.linalg.pinv(R + dyn.B.T @ self.Pcon @ dyn.B) @ (S.T + dyn.B.T @ self.Pcon @ dyn.A)
+        self.observe_every = observe_every
         
     def measure(self):
         return self.C @ self.x + self.D @ self.u
@@ -134,6 +139,7 @@ class MPC(Controller):
         
     @property
     def u(self):
+        # return np.zeros(self.B.shape[1])
         u = self.u_opt.value
         if u is not None:
             self.u_prev = u[:,0]

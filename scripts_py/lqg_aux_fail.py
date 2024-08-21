@@ -14,15 +14,14 @@ dynamics = StateSpaceDynamics(
     np.array([[1e-2, 0.0, 0.0], [0.0, 1e-2, 0.0], [0.0, 0.0, 0.0]]), # state covariance
 )
 
-openloop = Openloop(p=dynamics.input_size)
-integrator = Integrator(s=1, p=1, gain=0.3, leak=0.999)
-
 observation = StateSpaceObservation(
     np.array([[1.0, 0.0, -1.0], [1.0, 1.0, -1.0]]), # state to measure
     np.array([[0.0], [0.0]]), # input to measure
     np.array([[1e-2, 0], [0, 1e-2]]) # measure covariance
 )
 
+openloop = Openloop(p=dynamics.input_size)
+integrator = Integrator(s=1, p=1, gain=0.3, leak=0.999)
 # %%
 # put this into the LQG class
 lqg = LQG(dynamics, observation)
