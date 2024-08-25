@@ -27,16 +27,31 @@ function nyquist_plot(sys; kwargs...)
     p
 end
 
-function plot_psd(f, p; kwargs...)
-    plot(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power"; kwargs...)
+function plot_psd(f, p; normalize=true, kwargs...)
+    pl = plot()
+    plot_psd!(f, p; normalize=normalize, kwargs...)
+    pl
+end
+
+function plot_psd!(f, p; normalize=true, kwargs...)
+    if normalize
+        p /= p[1]
+    end
+    plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power"; kwargs...)
 end
 
 function plot_psd(psd::DSP.Periodograms.Periodogram; kwargs...)
-    plot(freq(psd)[2:end], power(psd)[2:end], xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)"; kwargs...)
+    f, p = freq(psd)[2:end], power(psd)[2:end]
+    plot_psd(f, p; kwargs...)
+end
+
+function plot_psd!(psd::DSP.Periodograms.Periodogram; kwargs...)
+    f, p = freq(psd)[2:end], power(psd)[2:end]
+    plot_psd!(f, p; kwargs...)
 end
 
 function plot_psd_p!(f, p; kwargs...)
     plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)"; kwargs...)
 end
 
-export nyquist_plot, nyquist_plot!, plot_psd_p!, plot_psd
+export nyquist_plot, nyquist_plot!, plot_psd_p!, plot_psd, plot_psd!

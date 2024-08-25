@@ -2,6 +2,7 @@ module multiwfs
     using ProgressMeter
     using Base.Threads
 
+    include("lqg.jl")
     include("open_loop_timeseries.jl")
     include("turbulence_dynamics_models.jl")
     include("zpkfilter.jl")
@@ -9,4 +10,5 @@ module multiwfs
     include("stability.jl")
     include("performance.jl")
     include("plotting.jl")
+    include("utils.jl")
 end 

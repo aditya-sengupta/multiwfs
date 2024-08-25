@@ -80,10 +80,7 @@ class StateSpaceObservation:
         return self.C.shape[0]
         
     def __repr__(self):
-        return f"State space observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."
-
-def simulate_known(process, dynamics, observation, controllers, plot=True, u_lim=np.inf):
-    
+        return f"State space observation model with state size {self.state_size}, input size {self.input_size} and measurement size {self.measure_size}."    
 
 def simulate(dynamics, observation, controllers, nsteps=10000, plot=True, u_lim=np.inf):
     states_one = np.zeros((nsteps, dynamics.state_size))

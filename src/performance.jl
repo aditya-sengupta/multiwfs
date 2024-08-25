@@ -2,7 +2,7 @@ using DSP
 using StatsBase: mean
 
 function psd(x, f_loop)
-    noverlap = 2^7# 2^(Int(floor(log2(length(x)/4)))-2)
+    noverlap = 2^(Int(floor(log2(length(x)/4)))-2)
     n = div(length(x), 8)
     return welch_pgram(x, n, noverlap; fs=f_loop)
 end

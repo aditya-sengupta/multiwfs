@@ -22,3 +22,11 @@ def rms(data, axis=None):
 	if axis is None:
 		axis = tuple(i for i in range(len(data.shape)))
 	return np.std(data - data.mean(axis=axis, keepdims=True), axis=axis)
+
+# https://stackoverflow.com/questions/13214809/pretty-print-2d-list
+def pretty_print(matrix):
+	s = [[str(e) for e in row] for row in matrix]
+	lens = [max(map(len, col)) for col in zip(*s)]
+	fmt = '\t'.join('{{:{}}}'.format(x) for x in lens)
+	table = [fmt.format(*row) for row in s]
+	print('\n'.join(table))
