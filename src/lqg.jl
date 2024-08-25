@@ -8,7 +8,7 @@ function A_vib(f_over_f_loop, k)
 end
 
 function dynamic_system_tf(s, A, B, C)
-    return (C * inv(s*I - A) * B)[1,1]
+    return (C * inv(exp(s)*I - A) * B)[1,1]
 end
 
 function lqg_tf(s, A, B, C, K, L)
