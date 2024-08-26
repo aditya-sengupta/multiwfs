@@ -13,7 +13,7 @@ function dynamic_system_tf(s, A, B, C)
 end
 
 function lqg_tf(s, A, B, C, K, L)
-    return (L * inv(s*I - A + B*L + K*C) * K)[1,1]
+    return (L * inv(exp(s)*I - A + B*L + K*C) * K)[1,1]
 end
 
 function kalman_gain(A, C, W, V)

@@ -17,14 +17,15 @@ begin
     Ã = block_diag(L, A)
     B̃ = vcat(zeros(3,2), B)
     C̃ = hcat(D, C)
+    D̃ = [1 0 0 0 0 0 0]'
     W = zeros(ComplexF64, size(Ã))
     W[n_input_history+1:end,n_input_history+1:end] = I(4)
     V = hcat(8...)
     K̃ = kalman_gain(Ã, C̃, W, V)
     @assert all(K̃[1:3] .+ 1 .≈ 1)
     K̃[1:3] .= 0
-    Vv = [0 0 -1 0 0 1]
+    Vv = [0 0 -1 0 0 0 1]
     Q = Vv' * Vv
-    R = ones(n_input_history, n_input_history)
-    L = lqr_gain(Ã, B̃, Q, R)
+    R = zeros(1,1)
+    L = lqr_gain(Ã, D̃, Q, R)
 end
