@@ -6,7 +6,13 @@ function block_diag(matrices...)
         @assert size(m, 1) == size(m, 2)
         total_dim += size(m, 1)
     end
-    A = zeros(total_dim, total_dim)
+    types = [typeof(m).parameters[1] for m in matrices]
+    if ComplexF64 in types
+        t = ComplexF64
+    else
+        t = Float64
+    end
+    A = zeros(t, total_dim, total_dim)
     i = 1
     for m in matrices
         k = size(m, 1)

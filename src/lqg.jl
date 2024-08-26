@@ -1,4 +1,5 @@
 using LinearAlgebra: I
+using ControlSystems: are, Discrete
 
 function A_vib(f_over_f_loop, k)
     ω = 2π * f_over_f_loop
@@ -15,4 +16,16 @@ function lqg_tf(s, A, B, C, K, L)
     return (L * inv(s*I - A + B*L + K*C) * K)[1,1]
 end
 
-export A_vib, dynamic_system_tf, lqg_tf
+function kalman_gain(A, C, W, V)
+    P = are(Discrete(1), A', C', W, V)
+    K = P * C' * inv(C * P * C' + V)
+    return K
+end
+
+function lqr_gain(A, B, Q, R)
+    P = are(Discrete(1), A, B, Q, R)
+    L = -inv(B' * P * B) * B' * P * A
+    return L
+end
+
+export A_vib, dynamic_system_tf, lqg_tf, kalman_gain, lqr_gain

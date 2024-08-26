@@ -4,6 +4,7 @@ using multiwfs
 using multiwfs: block_diag
 using LinearAlgebra: I
 using Plots
+using Distributions
 
 begin
     Nstep = 50_000
@@ -28,19 +29,25 @@ begin
     xcon = copy(x)
     ys, ycons = Float64[], Float64[]
     for _ in 1:Nstep
-        x = A*x
-        xcon = (A+B*L)*xcon
+        noise = rand(MvNormal(zeros(2), W*0))
+        x = A*x + noise
+        xcon = (A+B*L)*xcon + noise
         push!(ys, (C*x)[1])
         push!(ycons, (C*xcon)[1])
     end
     olp = psd(ys, f_loop)
     clp = psd(ycons, f_loop)
-    plot_psd(fr, power(olp)[2:end], normalize=true, label="OL PSD, time-domain", legend=:topleft, color=1)
-    plot!(fr, abs2.(dstf) ./ abs2(dstf[1]), xscale=:log10, yscale=:log10, label="Analytic OL PSD", color=:black, ls=:dash)
-    plot_psd!(fr, power(clp)[2:end], normalize=true, label="CL PSD, time-domain", color=2)
-    plot!(fr, abs2.(lqgf) ./ abs2(lqgf[1]) , xscale=:log10, yscale=:log10, label="Analytic CL PSD", color=:black, ls=:dash)
+    plot_psd(fr, power(olp)[2:end], normalize=false, label="OL PSD, time-domain", legend=:topleft, color=1)
+    plot!(fr, abs2.(dstf) ./ abs2(dstf[1]) .* power(olp)[2], xscale=:log10, yscale=:log10, label="Analytic OL PSD", color=:black, ls=:dash)
+    plot_psd!(fr, power(clp)[2:end], normalize=false, label="CL PSD, time-domain", color=2)
+    plot!(fr, abs2.(lqgf) ./ abs2(lqgf[1]) .* power(clp)[2], xscale=:log10, yscale=:log10, label="Analytic CL PSD", color=:black, ls=:dash)
     etf_td = (power(clp) ./ power(olp))[2:end]
-    etf_td = etf_td ./ etf_td[1]
+    etf_td = etf_td# ./ etf_td[1]
     plot_psd!(fr, etf_td .* abs2(lqgf[1] / dstf[1]), normalize=false, label="RTF, time-domain", color=3)
-    plot!(fr, abs2.(lqgf ./ dstf), label="Analytic RTF", color=:black, ls=:dash)
+    plot!(fr, abs2.(lqgf ./ dstf) .* (power(clp) ./ power(olp))[2], label="Analytic RTF", color=:black, ls=:dash)
 end
+
+# Next steps:
+# 1. Implement the Looze control scheme
+# 2. Add in the Kalman filter part so it's just an end-to-end controller TF
+# 3. Put the resulting analytic ETF on sliders for the four parameters
