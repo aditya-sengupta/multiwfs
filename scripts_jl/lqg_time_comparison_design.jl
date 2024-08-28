@@ -8,8 +8,8 @@ using Distributions
 
 begin
     Nstep = 50_000
-    times = 0.0:(1/f_loop):(Nstep/f_loop)
     f_loop = 1000.0
+    times = 0.0:(1/f_loop):(Nstep/f_loop)
     Av1 = real.(A_vib(50.0/f_loop, 0.05))
     # A = block_diag(Av1, zeros(1,1))
     A = Av1
@@ -30,7 +30,7 @@ begin
     xcon = copy(x)
     ys, ycons = Float64[], Float64[]
     for _ in 1:Nstep
-        noise = rand(MvNormal(zeros(2), W*0))
+        noise = rand(MvNormal(zeros(2), W))
         x = A*x + noise
         xcon = (A+B*L)*xcon + noise
         push!(ys, (C*x)[1])
@@ -38,13 +38,13 @@ begin
     end
     olp = psd(ys, f_loop)
     clp = psd(ycons, f_loop)
-    p = plot_psd(fr, power(olp)[2:end], normalize=true, label="OL PSD, time-domain", legend=:left, color=1)
-    plot!(fr, abs2.(dstf) ./ abs2(dstf[1]), xscale=:log10, yscale=:log10, label="Analytic OL PSD", color=:black, ls=:dash)
-    #plot_psd!(fr, power(clp)[2:end], normalize=false, label="CL PSD, time-domain", color=2)
-    #plot!(fr, abs2.(lqgf), xscale=:log10, yscale=:log10, label="Analytic CL PSD", color=:black, ls=:dash)
+    p = plot_psd(fr, power(olp)[2:end], normalize=false, label="OL PSD, time-domain", legend=:left, color=1)
+    plot!(fr, abs2.(dstf), xscale=:log10, yscale=:log10, label="Analytic OL PSD", color=1, ls=:dash)
+    plot_psd!(fr, power(clp)[2:end], normalize=false, label="CL PSD, time-domain", color=2)
+    plot!(fr, abs2.(lqgf), xscale=:log10, yscale=:log10, label="Analytic CL PSD", color=2, ls=:dash)
     etf_td = (power(clp) ./ power(olp))[2:end]
-    plot_psd!(fr, etf_td .* abs2(lqgf[1] / dstf[1]) ./ etf_td[1], normalize=false, label="RTF, time-domain", color=3)
-    plot!(fr, abs2.(lqgf ./ dstf), label="Analytic RTF", color=:black, ls=:dash)
+    plot_psd!(fr, etf_td, normalize=false, label="RTF, time-domain", color=3)
+    plot!(fr, abs2.(lqgf ./ dstf), label="Analytic RTF", color=3, ls=:dash)
     p
 end
 

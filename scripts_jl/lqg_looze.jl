@@ -15,7 +15,6 @@ begin
         L[i+1,i] = 1
     end
     Ã = block_diag(L, A)
-    B̃ = vcat(zeros(3,2), B)
     C̃ = hcat(D, C)
     D̃ = [1 0 0 0 0 0 0]'
     W = zeros(ComplexF64, size(Ã))

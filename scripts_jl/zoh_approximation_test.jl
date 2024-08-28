@@ -1,7 +1,7 @@
 using multiwfs
 using Plots
 using SciPy
-using Optim: optimize, minimizer, Options
+using Optim: optimize, minimizer, Options, SimulatedAnnealing
 using Polynomials
 
 function Hzoh_slow(s, slowness=10)

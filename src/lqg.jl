@@ -1,5 +1,6 @@
 using LinearAlgebra: I
 using ControlSystems: are, Discrete
+using SciPy: linalg
 
 function A_vib(f_over_f_loop, k)
     ω = 2π * f_over_f_loop
@@ -23,7 +24,12 @@ function kalman_gain(A, C, W, V)
 end
 
 function lqr_gain(A, B, Q, R)
-    P = are(Discrete(1), A, B, Q, R)
+    P = nothing
+    try
+        P = are(Discrete(1), A, B, Q, R)
+    catch 
+        P = linalg.solve_discrete_are(A, B, Q, R)
+    end
     L = -inv(B' * P * B) * B' * P * A
     return L
 end
