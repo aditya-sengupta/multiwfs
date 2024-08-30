@@ -13,8 +13,11 @@ function dynamic_system_tf(s, A, B, C)
     return (C * inv(exp(s)*I - A) * B)[1,1]
 end
 
-function lqg_tf(s, A, B, C, K, L)
-    return (L * inv(exp(s)*I - A + B*L + K*C) * K)[1,1]
+function lqg_tf(s, A, D, C, K, G)
+    ikcA = (I - K * C) * A
+    ikcD = (I - K * C) * D
+    inner_term = [inv(I - ikcA * zinv - ikcD * G * zinv) for zinv in exp.(-s)]
+    return [(G * it * K)[1,1] for it in inner_term]
 end
 
 function kalman_gain(A, C, W, V)

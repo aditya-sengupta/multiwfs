@@ -23,10 +23,10 @@ begin
                 L[i+1,i] = 1
             end
             A = block_diag(L, Av1, Av2)
-            B = [0 0 -1]
-            C = hcat(B, [1 0 1 0])
+            B = [-1 0 0]
+            C = [-1 0 0 1 0 1 0]
             B̃ = [1 0 0 0 0 0 0]'
-            Ccost = [-1 0 0 highfreq_cost 0 1 0]
+            Ccost = [1 0 0 highfreq_cost 0 1 0]
             fr = exp10.(-4:0.01:log10(f_loop/2))
             s = 2π * im * fr ./ f_loop
             W, V = zeros(size(A)), hcat(8.0...)
@@ -34,10 +34,9 @@ begin
             Q = Ccost' * Ccost
             R = zeros(1,1)
             K = kalman_gain(A, C, W, V)
-            L = lqr_gain(A, B̃, Q, R)
-            dstf = dynamic_system_tf.(s, Ref(A), Ref(B̃), Ref(C))
-            lqgf = lqg_tf.(s, Ref(A), Ref(B̃), Ref(C), Ref(K), Ref(L))
-            plot!(fr, abs2.(lqgf ./ dstf), xscale=:log10, yscale=:log10, label="w = $w", xlabel="Frequency (Hz)", ylabel="|ETF|²", title="HF cost = $highfreq_cost", legend=(highfreq_cost == 1e4 ? :bottomleft : nothing))
+            G = lqr_gain(A, B̃, Q, R)
+            lqgf = lqg_tf(s, A, B̃, C, K, G)
+            plot!(fr, abs2.(lqgf), xscale=:log10, yscale=:log10, label="w = $w", xlabel="Frequency (Hz)", ylabel="|ETF|²", title="HF cost = $highfreq_cost", legend=(highfreq_cost == 1e4 ? :bottomleft : nothing))
         end
         push!(pls, pl)
     end

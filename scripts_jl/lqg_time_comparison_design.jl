@@ -4,9 +4,11 @@ using multiwfs
 using multiwfs: block_diag
 using LinearAlgebra: I
 using Plots
-using Distributions
+using Distributions: Normal, MvNormal
 
 begin
+    σ = 1e-2
+    noise_dist = Normal(0, σ)
     Nstep = 50_000
     f_loop = 1000.0
     times = 0.0:(1/f_loop):(Nstep/f_loop)
@@ -24,22 +26,24 @@ begin
     K = Pobs * C' * inv(C * Pobs * C' + V)
     Pcon = real.(are(Discrete(1/f_loop), A, B, Q, R))
     L = -inv(R + B' * Pcon * B) * (B' * Pcon * A)
-    dstf = dynamic_system_tf.(s, Ref(A), Ref(B), Ref(C))
+    dstf = 1e-2 * (σ/2)^2 ./ abs2.(1 .- A[1,1] * exp.(-s) - A[1,2] * exp.(-2s)) 
     lqgf = lqg_tf.(s, Ref(A), Ref(B), Ref(C), Ref(K), Ref(L))
     x = [1; 0]
     xcon = copy(x)
     ys, ycons = Float64[], Float64[]
     for _ in 1:Nstep
-        noise = rand(MvNormal(zeros(2), W))
-        x = A*x + noise
-        xcon = (A+B*L)*xcon + noise
+        noise = rand(noise_dist)
+        x = A*x
+        x[1] += noise
+        xcon = (A+B*L)*xcon
+        xcon[1] += noise
         push!(ys, (C*x)[1])
         push!(ycons, (C*xcon)[1])
     end
     olp = psd(ys, f_loop)
     clp = psd(ycons, f_loop)
     p = plot_psd(fr, power(olp)[2:end], normalize=false, label="OL PSD, time-domain", legend=:left, color=1)
-    plot!(fr, abs2.(dstf), xscale=:log10, yscale=:log10, label="Analytic OL PSD", color=1, ls=:dash)
+    plot!(fr, dstf, xscale=:log10, yscale=:log10, label="Analytic OL PSD", color=1, ls=:dash)
     plot_psd!(fr, power(clp)[2:end], normalize=false, label="CL PSD, time-domain", color=2)
     plot!(fr, abs2.(lqgf), xscale=:log10, yscale=:log10, label="Analytic CL PSD", color=2, ls=:dash)
     etf_td = (power(clp) ./ power(olp))[2:end]
