@@ -2,20 +2,29 @@ using FFTW
 using StatsBase: mean, std
 using Plots
 using SciPy
+using QuadGK
 
-# check the results against the Python
+struct VonKarman
+    f₀::Float64
+    prefactor::Float64
 
-function psd_von_karman(f0=1e-2, f_loop=200)
-    fr = (1e-3:1e-3:0.5) .* f_loop
-    return (fr .+ f0).^(-11/3)
+    function VonKarman(D=3, v=10, rms_target=8, f_loop=1000)
+        f₀ = v / D
+        prefactor = rms_target^2 / quadgk(f -> (f + f₀)^(-11/3), 0, f_loop/2)[1]
+        new(f₀, prefactor)
+    end
 end
 
-function von_karman_turbulence(nframes=1000, fpf=10)
+function psd_von_karman(f, vk::VonKarman)
+    return vk.prefactor * (f + vk.f₀)^(-11/3)
+end
+
+function von_karman_turbulence(nframes=1000; fpf=10, f_loop=1000, offset=10/3)
     nsubframes = nframes * fpf
     pl = -11/3 # Kolmogorov?
     white_noise = rand(nsubframes) * 2π # phase
     grid = 0:nsubframes-1
-    xy = sqrt.((grid .- nsubframes/2 .+ 0.5).^2)
+    xy = sqrt.((grid .- nsubframes/2).^2 .+ offset * nsubframes)
     # ask Ben how to change this to von Karman
     amplitude = (xy .+ 1).^(pl/2) # amplitude central value in xy grid is one, so max val is one in power law, everything else lower
 
@@ -33,4 +42,4 @@ function von_karman_turbulence(nframes=1000, fpf=10)
     return real_time_domain .- mean(real_time_domain)
 end
 
-export psd_von_karman, von_karman_turbulence
+export VonKarman, psd_von_karman, von_karman_turbulence

@@ -4,20 +4,13 @@ using SciPy: linalg
 
 function A_vib(f_over_f_loop, k)
     ω = 2π * f_over_f_loop
-    a₁ = 2 * exp(-k * ω) * cos(ω * sqrt(Complex(1 - k^2)))
+    a₁ = 2 * exp(-k * ω) * cos(ω * sqrt(1 - k^2))
     a₂ = -exp(-2 * k * ω)
-    [a₁ a₂; 1 0]
+    return [a₁ a₂; 1 0]
 end
 
 function dynamic_system_tf(s, A, B, C)
     return (C * inv(exp(s)*I - A) * B)[1,1]
-end
-
-function lqg_tf(s, A, D, C, K, G)
-    ikcA = (I - K * C) * A
-    ikcD = (I - K * C) * D
-    inner_term = [inv(I - ikcA * zinv - ikcD * G * zinv) for zinv in exp.(-s)]
-    return [(G * it * K)[1,1] for it in inner_term]
 end
 
 function kalman_gain(A, C, W, V)
@@ -37,4 +30,21 @@ function lqr_gain(A, B, Q, R)
     return L
 end
 
-export A_vib, dynamic_system_tf, lqg_tf, kalman_gain, lqr_gain
+function A_DM(n_input_history)
+    L = zeros(n_input_history, n_input_history)
+    for i in 1:(n_input_history-1)
+        L[i+1,i] = 1
+    end
+    L
+end
+
+function lqg_controller_tf(A, D, C, K, G, zinvs)
+    ikcA = (I - K * C) * A
+    ikcD = (I - K * C) * D
+    numerator = [(G * inv(I - ikcA * zinv))[1,1] for zinv in zinvs]
+	denominator = [(I - G * inv(I - ikcA * zinv) * ikcD * zinv)[1,1] for zinv in zinvs]
+    return numerator .* (zinvs .^ 2) ./ denominator
+end
+
+
+export A_vib, A_DM, dynamic_system_tf, lqg_controller_tf, kalman_gain, lqr_gain
