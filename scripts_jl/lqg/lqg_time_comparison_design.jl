@@ -27,7 +27,7 @@ begin
     Pcon = real.(are(Discrete(1/f_loop), A, B, Q, R))
     L = -inv(R + B' * Pcon * B) * (B' * Pcon * A)
     dstf = 1e-2 * (σ/2)^2 ./ abs2.(1 .- A[1,1] * exp.(-s) - A[1,2] * exp.(-2s)) 
-    lqgf = lqg_tf.(s, Ref(A), Ref(B), Ref(C), Ref(K), Ref(L))
+    lqgf = lqg_controller_tf.(s, Ref(A), Ref(B), Ref(C), Ref(K), Ref(L))
     x = [1; 0]
     xcon = copy(x)
     ys, ycons = Float64[], Float64[]

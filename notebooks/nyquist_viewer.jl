@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.45
 
 using Markdown
 using InteractiveUtils
@@ -25,48 +25,25 @@ begin
 	using Revise
 end
 
-# ╔═╡ 0dcefc33-c624-446a-a2f2-7d342bacecf3
-@bind f_cutoff Slider(2.0:0.5:100.0)
+# ╔═╡ c87e29c0-af46-49c0-8264-fb8c90c7eb76
+@bind gain Slider(0.01:0.01:1.2)
 
-# ╔═╡ 46c274e6-25f8-483a-9a06-ccb7d0fb3b2e
-@bind delay Slider(0.0:0.05:1.0)
-
-# ╔═╡ 348b8b94-e344-48bf-8e66-09947d1e91ca
-sys = AOSystem(1000.0, delay, 0.01, 0.999, 10, "high", f_cutoff);
-
-# ╔═╡ eeaf4ef1-cf65-47a3-82b9-0c109732ba90
+# ╔═╡ f5b29214-724b-4e7c-ae72-61c7bda8af72
 begin
-	type_orig = sys.filter_type
-	gain_orig = sys.gain
-	f = 0.1:0.1:500.0
-	p = plot(xlabel="Frequency (Hz)", ylabel="RTF (unitless)", title="Rejection transfer functions", yscale=:log10, xscale=:log10, legend=:bottomright)
-	ftypes = ["low", "high"]
-	ftype_vals = []
-	for t in ftypes
-		sys.filter_type = t
-		search_gain!(sys)
-		push!(ftype_vals, abs2.(Hrej.(Ref(sys), f)))
-	end
-	energy = sum(ftype_vals)
-	for (v, t) in zip(ftype_vals, ftypes)
-		plot!(f,v, label=t * " pass filter")
-	end
-	sys.filter_type = type_orig
-	vline!([f_cutoff], color=:black, ls=:dash, label="Cutoff frequency")
-	p
+	f_loop = 200.0
+	f_cutoff = 3.0
+	ar1_high = ar1_filter(f_cutoff, f_loop, "high")
+	
+	sys_high = AOSystem(
+	    f_loop, 1.0, gain, 0.999, 10,
+	    ar1_high
+	)
+	
+	# search_gain!(sys_high)
+	nyquist_plot(sys_high)
 end
-
-# ╔═╡ a6f1b032-4dba-4cd9-ada9-7be9e8829bff
-round(search_gain!(sys), digits=2)
-
-# ╔═╡ 264e2435-10de-4217-8bf7-0d65fd837723
-nyquist_plot(sys)
 
 # ╔═╡ Cell order:
 # ╠═b6f41cbe-42eb-11ef-29db-f7b08d9f8ed0
-# ╠═eeaf4ef1-cf65-47a3-82b9-0c109732ba90
-# ╠═0dcefc33-c624-446a-a2f2-7d342bacecf3
-# ╠═46c274e6-25f8-483a-9a06-ccb7d0fb3b2e
-# ╠═348b8b94-e344-48bf-8e66-09947d1e91ca
-# ╟─a6f1b032-4dba-4cd9-ada9-7be9e8829bff
-# ╠═264e2435-10de-4217-8bf7-0d65fd837723
+# ╟─c87e29c0-af46-49c0-8264-fb8c90c7eb76
+# ╠═f5b29214-724b-4e7c-ae72-61c7bda8af72

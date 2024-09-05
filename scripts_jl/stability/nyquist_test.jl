@@ -1,5 +1,5 @@
 using multiwfs
-include("filter_setup.jl")
+include("../filtering/filter_setup.jl")
 
 f_loop = 200.0
 f_cutoff = 3.0

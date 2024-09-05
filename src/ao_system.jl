@@ -1,4 +1,4 @@
-mutable struct AOSystem
+mutable struct AOSystem{F}
     f_loop::Float64
     Ts::Float64
     frame_delay::Float64
@@ -6,13 +6,13 @@ mutable struct AOSystem
     gain::Float64
     leak::Float64
     fpf::Int64
-    zpkfilter::ZPKFilter 
+    control_filter::F 
 
-    function AOSystem(f_loop, frame_delay, gain, leak, fpf, zpkfilter)
+    function AOSystem(f_loop, frame_delay, gain, leak, fpf, control_filter)
         Ts = 1 / f_loop
         frame_delay = floor(frame_delay) + round((frame_delay-floor(frame_delay))*fpf)/fpf
         τ = frame_delay * Ts
-        new(f_loop, Ts, frame_delay, τ, gain, leak, fpf, zpkfilter)
+        new{typeof(control_filter)}(f_loop, Ts, frame_delay, τ, gain, leak, fpf, control_filter)
     end
 end
 
@@ -46,7 +46,7 @@ function Hcont(ao::AOSystem, s)
 end
 
 function Hfilter(ao::AOSystem, s)
-    return transfer_function(ao.zpkfilter, s ./ ao.f_loop)
+    return transfer_function(ao.control_filter, s ./ ao.f_loop)
 end
 
 function Hol(ao::AOSystem, s::Complex)
