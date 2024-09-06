@@ -30,6 +30,9 @@ begin
 	using Polynomials
 end
 
+# ╔═╡ e4f22ab9-7e18-437a-a3d2-d60f26d7c4ff
+using Symbolics
+
 # ╔═╡ c57e0875-5d37-4693-9e6e-f02125cf4c0c
 function design(params::Vector, lows::Vector, highs::Vector)
 	
@@ -61,7 +64,7 @@ end;
 vk = VonKarman();
 
 # ╔═╡ 2cb452db-4559-49ee-9dcf-1ca164c433c8
-"""begin
+begin
 	freq_low = 0.0079
 	damp_low = 1.0
 	freq_high = 2.7028
@@ -70,17 +73,14 @@ vk = VonKarman();
 	log_lf_process_noise = -8.0
 	log_hf_cost = -0.6807
 	log_hf_process_noise = -8.0
-end;"""
+end;
 
 # ╔═╡ fc73834e-37f1-4e3a-98e8-1d0e990fb3f2
-@bind pars design(
-	["freq_low", "damp_low", "freq_high", "damp_high", "log_lf_cost", "log_lf_process_noise", "log_hf_cost", "log_hf_process_noise"],
-	[1e-4, 0.0, 1.0, 0.0, -8.0, -8.0, -8.0, -8.0],
-	[1e-1, 1.0, 100.0, 1.0, 8.0, 8.0, 8.0, 8.0]
-)
-
-# ╔═╡ 23f5e0d0-8f72-4791-b484-83f7a702b58a
-freq_low, damp_low, freq_high, damp_high, log_lf_cost, log_lf_process_noise, log_hf_cost, log_hf_process_noise = pars.freq_low, pars.damp_low, pars.freq_high, pars.damp_high, pars.log_lf_cost, pars.log_lf_process_noise, pars.log_hf_cost, pars.log_hf_process_noise;
+"""@bind pars design(
+	["log_lf_cost", "log_lf_process_noise", "log_hf_cost", "log_hf_process_noise"],
+	[-8.0, -8.0, -8.0, -8.0],
+	[8.0, 8.0, 8.0, 8.0]
+)""";
 
 # ╔═╡ 9484c00f-2dde-4ddb-8b30-55947784025c
 begin
@@ -131,12 +131,12 @@ begin
 	lqg_etf_norm_interp = CubicSpline(lqg_etf_norm, fr, extrapolate=true)
 	residual_error = sqrt(quadgk(f -> psd_von_karman(f, vk) * lqg_etf_norm_interp(f), 0, 500)[1])
 	hpf_ol = 1 ./ lqg_etf .- 1
-	p = plot(
+	plot(
 		fr,
 		lqg_etf_norm,
 		xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="|ETF|²", xticks=[1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2],
 		title="HPF residual error = $(round(residual_error, digits=3)) rad", ylims=(1e-8, 1e2), label="High-speed ETF",
-		legend=(0.55,0.25)
+		legend=:bottomleft
 	)
 	plot!(
 		fr_slow,
@@ -144,7 +144,7 @@ begin
 		xscale=:log10, yscale=:log10, label="Low-speed ETF",
 	)
 	combined_etf_norm = abs2.(1 ./ (1 .+ hpf_ol[1:cutoff_idx] .+ lpf_ol))
-	append!(combined_etf_norm, lqg_etf_norm[cutoff_idx+1:end])
+	append!(combined_etf_norm, ones(length(fr) - length(fr_slow)))
 	plot!(
 		fr,
 		combined_etf_norm,
@@ -158,8 +158,6 @@ begin
 	hline!([1], ls=:dash, color=:black, label=nothing)
 	# vline!([freq_low], label="freq_low = $(freq_low) Hz, damp_low = $(damp_low)", ls=:dash, color=:black)
 	# vline!([freq_high], label="freq_high = $(freq_high) Hz, damp_high = $(damp_high)", ls=:dash, color=:black)
-	Plots.savefig("../figures/lqgfirst_etf_parts.pdf")
-	p
 end
 
 # ╔═╡ 2b18cef8-5b13-48f9-9bda-db17b9c9b24b
@@ -187,17 +185,73 @@ begin
 	low_etf_lqg = 1 ./ (1 .+ lqg_controller_tf(A_low, D_low, C_low, K_low, L_low, zinvs))
 end;
 
+# ╔═╡ a364d840-a783-4b59-8c27-f3eba952eadb
+@variables x;
+
+# ╔═╡ a36790ce-36d4-4ff5-94fa-4929b9745743
+begin
+	A, D, C, K, L_l = lqg_design_from_params(freq_high, damp_high, freq_low, damp_low, log_lf_cost, log_lf_process_noise, log_hf_cost, log_hf_process_noise, f_loop)
+	analytic_tf = simplify(1 / (1 + lqg_controller_tf(A, D, C, K, L_l, 1/x)))
+end;
+
+# ╔═╡ 29793343-5b1c-45f6-b37b-8ab1473f4019
+function extract_coeffs(symbolic_args)
+	i = 0
+	coeffs = []
+	while true
+		new_coeff = Symbolics.coeff(symbolic_args, x^i)
+		if (i > 0) & (new_coeff ≈ 0)
+			return coeffs
+		end
+		push!(coeffs, new_coeff)
+		i += 1
+	end
+end
+
+# ╔═╡ 95f5db8f-ea75-4433-8617-7745d802ed64
+begin
+	numerator_coeffs = Float64.(extract_coeffs(simplify(analytic_tf.val.arguments[1], expand=true)))
+	denominator_coeffs = Float64.(extract_coeffs(simplify(analytic_tf.val.arguments[2], expand=true)))
+	normalizer = numerator_coeffs[end]
+	numerator_coeffs ./= normalizer
+	denominator_coeffs ./= normalizer
+end
+
+# ╔═╡ 35cf0b26-a642-46f8-af34-e4ffed8f886d
+lqg_zeros = roots(Polynomial(numerator_coeffs))
+
+# ╔═╡ 958c1cd8-ae47-43af-b888-0fea03d7ac17
+lqg_poles = roots(Polynomial(denominator_coeffs))
+
+# ╔═╡ 260a0349-332d-4696-b839-d4bd4dd096c0
+begin
+	plot(aspect_ratio=:equal)
+	scatter!(real.(lqg_zeros), imag.(lqg_zeros), label="Zeros")
+	scatter!(real.(lqg_poles), imag.(lqg_poles), label="Poles")
+end
+
+# ╔═╡ f9ceaa2d-104a-487a-a52e-924ae9e51834
+ZPKFilter(lqg_zeros, lqg_poles, 1.0)
+
 # ╔═╡ Cell order:
 # ╟─6e63bc5c-6721-11ef-0e75-89cf19a9f817
 # ╟─c57e0875-5d37-4693-9e6e-f02125cf4c0c
 # ╠═98416ad3-5460-4b52-bf3b-073707a2e053
 # ╠═4622ed0c-6e04-4d18-a636-6316538c8b6c
 # ╠═2cb452db-4559-49ee-9dcf-1ca164c433c8
-# ╟─23f5e0d0-8f72-4791-b484-83f7a702b58a
 # ╟─fc73834e-37f1-4e3a-98e8-1d0e990fb3f2
-# ╠═551dccd9-7348-4c18-8f9e-d2e65fba8a6f
+# ╟─551dccd9-7348-4c18-8f9e-d2e65fba8a6f
 # ╠═9484c00f-2dde-4ddb-8b30-55947784025c
 # ╠═0ae2ddcf-1341-412c-8560-7af718eb6e8b
 # ╠═b84a3b69-c406-422c-a881-8b7858b6c5f3
 # ╠═2b18cef8-5b13-48f9-9bda-db17b9c9b24b
 # ╟─4cd07eca-976c-4230-8031-45a2004bbbbd
+# ╠═e4f22ab9-7e18-437a-a3d2-d60f26d7c4ff
+# ╠═a364d840-a783-4b59-8c27-f3eba952eadb
+# ╠═a36790ce-36d4-4ff5-94fa-4929b9745743
+# ╠═29793343-5b1c-45f6-b37b-8ab1473f4019
+# ╠═95f5db8f-ea75-4433-8617-7745d802ed64
+# ╠═35cf0b26-a642-46f8-af34-e4ffed8f886d
+# ╠═958c1cd8-ae47-43af-b888-0fea03d7ac17
+# ╠═260a0349-332d-4696-b839-d4bd4dd096c0
+# ╠═f9ceaa2d-104a-487a-a52e-924ae9e51834

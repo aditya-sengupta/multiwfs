@@ -105,4 +105,5 @@ begin
     plot!(fr, Nfast_to_X.(zr, Cfast, Cslow, R) .|> abs2, label="|X/Nfast|²", ls=:dash, lw=2, color=2)
     plot!(fr, Nslow_to_X.(zr, Cfast, Cslow, R) .|> abs2, label="|X/Nslow|²", ls=:dash, lw=2, color=3)
     plot(p1, p2, size=(500, 300))
+    Plots.savefig("figures/lqgfirst_fiveetfs.pdf")
 end
