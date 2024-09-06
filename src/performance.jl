@@ -15,7 +15,7 @@ function integrator_control(sys, open_loop, gain, leak, update_every; hpf_gain=0
     average_buffer = []
     for i in 2:N
         push!(average_buffer, closed_loop[i-1])
-        y_n = output!(sys.zpkfilter, closed_loop[i-delay_frames])[1]
+        y_n = output!(sys.control_filter, closed_loop[i-delay_frames])[1]
         if i % update_every == 0
             command = leak * command - gain * mean(average_buffer)
             average_buffer = []

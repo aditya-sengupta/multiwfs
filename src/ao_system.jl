@@ -45,8 +45,17 @@ function Hcont(ao::AOSystem, s)
     return Hlint(ao, s)
 end
 
+function Hcont(ao::AOSystem{LQG}, s)
+    tf = transfer_function(ao.control_filter, s ./ ao.f_loop)
+    return tf / (1 + tf)
+end
+
 function Hfilter(ao::AOSystem, s)
-    return transfer_function(ao.control_filter, s ./ ao.f_loop)
+    transfer_function(ao.control_filter, s ./ ao.f_loop)
+end
+
+function Hfilter(ao::AOSystem{LQG}, s)
+    1
 end
 
 function Hol(ao::AOSystem, s::Complex)

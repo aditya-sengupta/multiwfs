@@ -30,37 +30,16 @@ Vv = [0 -1 0 1 0 exp10(log_hf_cost) 0 exp10(log_lf_cost)]
 Q = Vv' * Vv
 R = zeros(1,1)
 L = lqr_gain(Ã, D̃, Q, R)
-
-#analytic_tf = simplify(lqg_controller_tf(Ã, D̃, C̃, K̃, L, 1/x))
+lqg = LQG(Ã, D̃, C̃, K̃, L)
 
 fr = exp10.(-4:0.01:log10(f_loop/2))
 sr = 2π .* im * (fr ./ f_loop)
-zr = exp.(sr)
-#[substitute(analytic_tf, Dict(x => 1/z)) for z in zr]
-#[lqg_controller_tf(Ã, D̃, C̃, K̃, L, z) for z in zr]
+lqg_ol_tf = transfer_function.(Ref(lqg), sr)
 
-"""function extract_coeffs(symbolic_args)
-	i = 0
-	coeffs = []
-	while true
-		new_coeff = Symbolics.coeff(symbolic_args, x^i)
-		if (i > 0) & (new_coeff ≈ 0)
-			return coeffs
-		end
-		push!(coeffs, new_coeff)
-		i += 1
-	end
-end"""
+sys_high = AOSystem(
+    f_loop, 1.0, 1.0, 0.0, 10,
+    lqg
+)
 
-#numerator_coeffs = Float64.(extract_coeffs(simplify(analytic_tf.val.arguments[1], expand=true)))
-#denominator_coeffs = Float64.(extract_coeffs(simplify(analytic_tf.val.arguments[2], expand=true)))
-#normalizer = numerator_coeffs[end]
-#numerator_coeffs ./= normalizer
-#denominator_coeffs ./= normalizer
-#lqg_zeros = roots(Polynomial(numerator_coeffs))
-#lqg_poles = roots(Polynomial(denominator_coeffs))
-
-search_gain!(sys_high)
 nyquist_plot(sys_high)
 
-plot(fr, abs2.(1 ./ (1 .+ lqg_ol_tf)), xscale=:log10, yscale=:log10)

@@ -21,6 +21,8 @@ end
 function transfer_function(lqg::LQG, s::Complex)
     zinv = exp(-s)
     numerator = (lqg.L * inv(I - lqg.ikcA * zinv))[1,1]
-	denominator = (I - G * inv(I - lqg.ikcA * zinv) * lqg.ikcD * zinv)[1,1]
+	denominator = (I - lqg.L * inv(I - lqg.ikcA * zinv) * lqg.ikcD * zinv)[1,1]
     return numerator * (zinv ^ 2) / denominator
 end
+
+export LQG, transfer_function

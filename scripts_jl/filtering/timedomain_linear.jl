@@ -35,11 +35,11 @@ begin
     end
     const open_loop = open_loop_t
 end
-multiwfs.reset!(sys_high.zpkfilter)
+multiwfs.reset!(sys_high.control_filter)
 plot(integrator_control(sys_high, open_loop, 1.0, 0.999, 10, hpf_gain=0.15, delay_frames=1))
 
 begin
-    multiwfs.reset!(sys_high.zpkfilter)
+    multiwfs.reset!(sys_high.control_filter)
     ol_psd_p = psd(open_loop, f_loop)
     f, ol_psd = freq(ol_psd_p)[2:end], power(ol_psd_p)[2:end]
     etf_regular = power(psd(integrator_control(sys_test, open_loop, 0.3, 0.999, 1, delay_frames=1), f_loop))[2:end] ./ ol_psd

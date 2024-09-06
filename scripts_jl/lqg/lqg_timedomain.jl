@@ -1,5 +1,5 @@
 using multiwfs
-using multiwfs: rms
+using multiwfs: rms, Hfilter, Hcont
 using Plots
 using Distributions: MvNormal, Normal
 using LinearAlgebra: diag, diagm, I
@@ -33,15 +33,13 @@ begin
     Q = Vv' * Vv
     R = zeros(1,1)
     L = lqr_gain(Ã, D̃, Q, R)
+    lqg = LQG(Ã, D̃, C̃, K̃, L)
 end
 
 begin
     N = size(Ã, 1)
-    W = diagm(diag(B * B'))
-    W_indices = findall(diag(W) .!= 0)
-    # process_noise = MvNormal(zeros(length(W_indices)), W[W_indices,W_indices])
     x, x̂, x_ol = zeros(N), zeros(N), zeros(N)
-    x[W_indices] .= rand(process_noise)
+    x += B * rand(Normal())
     y = C̃ * x
     ikca = (I - K̃ * C̃) * Ã
     ikcd = (I - K̃ * C̃) * D̃
@@ -65,8 +63,46 @@ end
 plot_psd(psd(y_ol, 1000), normalize=false)
 plot_psd!(psd(y, 1000), normalize=false)
 
-fr = freq(psd(y, 1000))
-etf2 = power(psd(y, 1000)) ./ power(psd(y_ol, 1000))
-etf_analytic = 1 ./ (1 .+ lqg_controller_tf(Ã, D̃, C̃, K̃, L, 1 ./ exp.(2π .* im .* fr ./ f_loop)))
-plot(fr[2:end], etf2[2:end], xscale=:log10, yscale=:log10)
-plot!(fr[2:end], abs2.(etf_analytic[2:end]))
+fr, y_psd = genpsd(y, 1000)
+fr, yol_psd = genpsd(y_ol, 1000)
+etf2 = y_psd ./ yol_psd
+etf_analytic = 1 ./ (1 .+ transfer_function.(Ref(lqg), 2π .* im .* fr ./ f_loop))
+plot(fr, etf2, xscale=:log10, yscale=:log10, label="Time-domain ETF", xlabel="Frequency (Hz)", ylabel="|ETF|²", legend=:bottomright)
+plot!(fr, abs2.(etf_analytic), label="Analytic ETF")
+
+f_cutoff = 1
+ar1_low = ar1_filter(f_cutoff, f_loop / 10, "low")
+sys_low = AOSystem(f_loop, 1.0, 0.1, 0.999999, 10, ar1_low)
+search_gain!(sys_low)
+
+fr = exp10.(-2:0.001:log10(f_loop/2))
+
+begin
+    zr = exp.(2π * im * fr ./ f_loop)
+    Cfast = z -> transfer_function(lqg, log(z))
+    Cslow = z -> (real(log(z) / (2π * im)) < 1/20) ? (Hfilter(sys_low, log(z)) * Hcont(sys_low, log(z))) : 1.0
+    R = 10
+    p1 = plot(
+        fr,
+        phi_to_X.(zr, Cfast, Cslow, R) .|> abs2,
+        xscale=:log10, yscale=:log10, 
+        xlabel="Frequency (Hz)", ylabel="|ETF|²",
+        label="|X/Φ|²",
+        xticks=exp10.(-4:2), yticks=exp10.(-10:2:2),
+        legend=:bottomright, lw=2
+    )
+    plot!(fr, Lfast_to_X.(zr, Cfast, Cslow, R) .|> abs2, label="|X/Lfast|²", color=2, lw=2)
+    plot!(fr, Lslow_to_X.(zr, Cfast, Cslow, R) .|> abs2, label="|X/Lslow|²", color=3, lw=2)
+    p2 =  plot(
+        fr,
+        phi_to_X.(zr, Cfast, Cslow, R) .|> abs2,
+        xscale=:log10, yscale=:log10, 
+        xlabel="Frequency (Hz)", ylabel="|ETF|²",
+        label="|X/Φ|²",
+        xticks=exp10.(-4:2), yticks=exp10.(-10:2:2),
+        legend=:bottomright, lw=2
+    )
+    plot!(fr, Nfast_to_X.(zr, Cfast, Cslow, R) .|> abs2, label="|X/Nfast|²", ls=:dash, lw=2, color=2)
+    plot!(fr, Nslow_to_X.(zr, Cfast, Cslow, R) .|> abs2, label="|X/Nslow|²", ls=:dash, lw=2, color=3)
+    plot(p1, p2, size=(500, 300))
+end

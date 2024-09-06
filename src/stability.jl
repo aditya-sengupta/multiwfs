@@ -36,7 +36,7 @@ function nyquist_and_margins(sys)
     imag_axis_crossings = zero_crossings(freq -> imag(Hol(sys, freq)), linfreq, imag.(nyquist_contour))
     gm_candidate_points = Hol.(Ref(sys), imag_axis_crossings)
     if length(gm_candidate_points) > 0
-        gm_point = minimum(real(x) for x in gm_candidate_points if !isnan(x))
+        gm_point = minimum(real(x) for x in gm_candidate_points if (!isnan(x)) & (real(x) > -1))
         gm = -1 / real(gm_point)
     end
     unit_circle_crossings = zero_crossings(freq -> abs2(Hol(sys, freq)) - 1, linfreq, abs2.(nyquist_contour) .- 1)

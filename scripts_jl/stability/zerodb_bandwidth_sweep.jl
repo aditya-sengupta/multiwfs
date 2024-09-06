@@ -5,8 +5,6 @@ using ProgressMeter
 using Base.Threads
 using ColorSchemes
 
-default(fontfamily= "Computer Modern", linewidth=1, framestyle=:box, label=nothing, grid=true, legend_font_halign=:left)
-
 sys = AOSystem(1000.0, 1.0, 0.01, 0.999, 10, "high", 1.0)
 search_gain!(sys)
 gains = gain_map(sys)
