@@ -61,7 +61,7 @@ end;
 vk = VonKarman();
 
 # ╔═╡ 2cb452db-4559-49ee-9dcf-1ca164c433c8
-"""begin
+begin
 	freq_low = 0.0079
 	damp_low = 1.0
 	freq_high = 2.7028
@@ -70,23 +70,23 @@ vk = VonKarman();
 	log_lf_process_noise = -8.0
 	log_hf_cost = -0.6807
 	log_hf_process_noise = -8.0
-end;"""
+end;
+
+# ╔═╡ 23f5e0d0-8f72-4791-b484-83f7a702b58a
+# freq_low, damp_low, freq_high, damp_high, log_lf_cost, log_lf_process_noise, log_hf_cost, log_hf_process_noise = pars.freq_low, pars.damp_low, pars.freq_high, pars.damp_high, pars.log_lf_cost, pars.log_lf_process_noise, pars.log_hf_cost, pars.log_hf_process_noise;
 
 # ╔═╡ fc73834e-37f1-4e3a-98e8-1d0e990fb3f2
 @bind pars design(
 	["freq_low", "damp_low", "freq_high", "damp_high", "log_lf_cost", "log_lf_process_noise", "log_hf_cost", "log_hf_process_noise"],
 	[1e-4, 0.0, 1.0, 0.0, -8.0, -8.0, -8.0, -8.0],
 	[1e-1, 1.0, 100.0, 1.0, 8.0, 8.0, 8.0, 8.0]
-)
-
-# ╔═╡ 23f5e0d0-8f72-4791-b484-83f7a702b58a
-freq_low, damp_low, freq_high, damp_high, log_lf_cost, log_lf_process_noise, log_hf_cost, log_hf_process_noise = pars.freq_low, pars.damp_low, pars.freq_high, pars.damp_high, pars.log_lf_cost, pars.log_lf_process_noise, pars.log_hf_cost, pars.log_hf_process_noise;
+);
 
 # ╔═╡ 9484c00f-2dde-4ddb-8b30-55947784025c
 begin
-	f_cutoff = 1
+	f_cutoff = 0.005
 	ar1_low = ar1_filter(f_cutoff, f_loop / 10, "low")
-	sys_low = AOSystem(f_loop, 1.0, 0.1, 0.999999, 10, ar1_low)
+	sys_low = AOSystem(f_loop, 1.0, 0.1, 0.9999999, 10, ar1_low)
 	search_gain!(sys_low)
 	lpf_ol = Hol.(Ref(sys_low), fr_slow)
 	low_etf = Hrej.(Ref(sys_low), fr_slow)
@@ -193,9 +193,9 @@ end;
 # ╠═98416ad3-5460-4b52-bf3b-073707a2e053
 # ╠═4622ed0c-6e04-4d18-a636-6316538c8b6c
 # ╠═2cb452db-4559-49ee-9dcf-1ca164c433c8
-# ╟─23f5e0d0-8f72-4791-b484-83f7a702b58a
-# ╟─fc73834e-37f1-4e3a-98e8-1d0e990fb3f2
-# ╠═551dccd9-7348-4c18-8f9e-d2e65fba8a6f
+# ╠═23f5e0d0-8f72-4791-b484-83f7a702b58a
+# ╠═fc73834e-37f1-4e3a-98e8-1d0e990fb3f2
+# ╟─551dccd9-7348-4c18-8f9e-d2e65fba8a6f
 # ╠═9484c00f-2dde-4ddb-8b30-55947784025c
 # ╠═0ae2ddcf-1341-412c-8560-7af718eb6e8b
 # ╠═b84a3b69-c406-422c-a881-8b7858b6c5f3

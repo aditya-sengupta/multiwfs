@@ -43,7 +43,7 @@ begin
     y = C̃ * x
     ikca = (I - K̃ * C̃) * Ã
     ikcd = (I - K̃ * C̃) * D̃
-    nsteps = 1_000_000
+    nsteps = 10_000
     y, y_ol = zeros(nsteps), zeros(nsteps)
     for i in 1:nsteps
         x_ol = Ã * x_ol
@@ -70,9 +70,9 @@ etf_analytic = 1 ./ (1 .+ transfer_function.(Ref(lqg), 2π .* im .* fr ./ f_loop
 plot(fr, etf2, xscale=:log10, yscale=:log10, label="Time-domain ETF", xlabel="Frequency (Hz)", ylabel="|ETF|²", legend=:bottomright)
 plot!(fr, abs2.(etf_analytic), label="Analytic ETF")
 
-f_cutoff = 1
+f_cutoff = 0.005
 ar1_low = ar1_filter(f_cutoff, f_loop / 10, "low")
-sys_low = AOSystem(f_loop, 1.0, 0.1, 0.999999, 10, ar1_low)
+sys_low = AOSystem(f_loop, 1.0, 0.1, 0.9999999, 10, ar1_low)
 search_gain!(sys_low)
 
 fr = exp10.(-2:0.001:log10(f_loop/2))

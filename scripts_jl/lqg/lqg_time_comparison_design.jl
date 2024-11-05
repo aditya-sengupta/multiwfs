@@ -13,7 +13,7 @@ begin
     f_loop = 1000.0
     times = 0.0:(1/f_loop):(Nstep/f_loop)
     Av1 = real.(A_vib(50.0/f_loop, 0.05))
-    # A = block_diag(Av1, zeros(1,1))
+    A = block_diag(Av1, zeros(1,1))
     A = Av1
     B = reshape([1 0], (2,1))
     C = reshape([1 0], (1,2))
