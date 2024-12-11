@@ -26,7 +26,7 @@ begin
 end
 
 npzwrite(
-    "data/delay_ar1.npz",
+    "data/lqgfirst_lowercutoff.npz",
     Dict(
         "K" => K̃,
         "G" => L,
@@ -109,6 +109,8 @@ begin
     lqg = LQG(Ã, D̃, C̃, K̃, L)
 end
 
+
+
 begin
     N = size(Ã, 1)
     x, x̂, x_ol = zeros(N), zeros(N), zeros(N)
@@ -116,7 +118,7 @@ begin
     y = C̃ * x
     ikca = (I - K̃ * C̃) * Ã
     ikcd = (I - K̃ * C̃) * D̃
-    nsteps = 10_000_000
+    nsteps = 100_000
     y, y_ol = zeros(nsteps), zeros(nsteps)
     for i in 1:nsteps
         x_ol = Ã * x_ol
