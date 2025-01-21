@@ -1,5 +1,13 @@
 using multiwfs
+using multiwfs: Hfilter, Hcont
 using Plots
+using NPZ
+
+lqgfirst_matrices = npzread("data/lqgfirst_endsummer2024.npz")
+
+lqg = LQG([lqgfirst_matrices[x] for x in ["A", "D", "C", "K", "G"]]...)
+
+Cfast  = z -> transfer_function.(Ref(lqg), log(z))
 
 f_loop = 1000.0
 fr = exp10.(-2:0.01:log10(f_loop/2))
@@ -32,9 +40,8 @@ end
 
 
 begin
-    Cfast_const = 1e-1
-    plot(fr, abs2.(Lslow_to_X.(zr, z -> Cfast_const, Cslow, 10)), xscale=:log10, xlabel="Frequency (Hz)", ylabel="|NCP-bleed TFs|²", yscale=:log10, label="Lslow -> X, don't reject Lslow -> Y", legend=:left, ylim=(1e-8, 10), yticks=[1e-8, 1e-6, 1e-4, 1e-2, 1e0], color=1)
-    plot!(fr, abs2.(Lslow_to_Y.(zr, z -> Cfast_const, Cslow, 10)), xscale=:log10, xlabel="Frequency (Hz)", ylabel="|NCP-bleed TFs|²", yscale=:log10, label="Lslow -> Y, don't reject Lslow -> Y", color=1, ls=:dash)
-    plot!(fr, abs2.(Lslow_to_X.(zr, z -> Cfast_const, Cslow_rejectlslow, 10)), xscale=:log10, label="Lslow -> X, do reject Lslow -> Y", color=2)
-    plot!(fr, abs2.(Lslow_to_Y.(zr, z -> Cfast_const, Cslow_rejectlslow, 10)), xscale=:log10, label="Lslow -> Y, do reject Lslow -> Y", color=2, ls=:dash)
+    plot(fr, abs2.(Lslow_to_X.(zr, Cfast, Cslow_regular, 10)), xscale=:log10, xlabel="Frequency (Hz)", ylabel="|NCP-bleed TFs|²", yscale=:log10, label="Lslow -> X, don't reject Lslow -> Y", legend=:bottom, ylim=(1e-8, 100), yticks=[1e-8, 1e-6, 1e-4, 1e-2, 1e0, 1e2], color=1)
+    plot!(fr, abs2.(Lslow_to_Y.(zr, Cfast, Cslow_regular, 10)), xscale=:log10, xlabel="Frequency (Hz)", ylabel="|NCP-bleed TFs|²", yscale=:log10, label="Lslow -> Y, don't reject Lslow -> Y", color=1, ls=:dash)
+    plot!(fr, abs2.(Lslow_to_X.(zr, Cfast, Cslow_rejectlslow, 10)), xscale=:log10, label="Lslow -> X, do reject Lslow -> Y", color=2)
+    plot!(fr, abs2.(Lslow_to_Y.(zr, Cfast, Cslow_rejectlslow, 10)), xscale=:log10, label="Lslow -> Y, do reject Lslow -> Y", color=2, ls=:dash)
 end

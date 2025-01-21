@@ -46,5 +46,4 @@ function lqg_controller_tf(A, D, C, K, G, zinvs)
     return numerator .* (zinvs .^ 2) ./ denominator
 end
 
-
 export A_vib, A_DM, dynamic_system_tf, lqg_controller_tf, kalman_gain, lqr_gain

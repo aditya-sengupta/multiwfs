@@ -8,7 +8,7 @@ struct VonKarman
     f₀::Float64
     prefactor::Float64
 
-    function VonKarman(D=3, v=10, rms_target=8, f_loop=1000)
+    function VonKarman(;D=3, v=10, rms_target=8, f_loop=1000)
         f₀ = v / D
         prefactor = rms_target^2 / quadgk(f -> (f + f₀)^(-11/3), 0, f_loop/2)[1]
         new(f₀, prefactor)

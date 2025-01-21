@@ -109,7 +109,15 @@ begin
     lqg = LQG(Ã, D̃, C̃, K̃, L)
 end
 
-
+npzwrite("data/lqgfirst_endsummer2024.npz",Dict(
+    "A" => lqg.A,
+    "D" => lqg.D,
+    "C" => lqg.C,
+    "K" => K̃,
+    "G" => L,
+    "ikcA" => lqg.ikcA,
+    "ikcD" => lqg.ikcD
+))
 
 begin
     N = size(Ã, 1)
