@@ -1,0 +1,122 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+\title{Multi-wavefront sensor single-conjugate transfer function derivations}
+\author{Aditya R. Sengupta}
+
+\usepackage[margin=0.5in]{geometry}
+\usepackage{graphicx}
+\usepackage{lipsum}
+\usepackage{custom}
+
+\begin{document}
+    \maketitle
+    \begin{figure}[h]
+        \includegraphics[width=\textwidth]{blockdiag_full_s.pdf}
+    \end{figure}
+
+    We'd like to derive transfer functions between each input ($\phi$, $L_{\text{fast}}$, $L_{\text{slow}}$, $n_{\text{fast}}$, $n_{\text{slow}}$) and output ($X$, the signal seen by the slow WFS; and $Y$, the signal seen by the fast WFS). We do this by writing down relationships between the intermediate named signals, and eliminating any signals other than the input and output.
+
+    Going ``backwards'', we have
+
+    \begin{align*}
+        \epsilon &= \phi - D \\
+        D &= \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} s_{\text{fast}} + C_{\text{slow}} s_{\text{slow}}} \\
+        s_{\text{fast}} &= n_{\text{fast}} + \frac{1 - e^{-sT}}{sT} Y \\
+        Y &= L_{\text{fast}} + \epsilon \\
+        s_{\text{slow}} &= n_{\text{slow}} + \frac{1 - e^{-sRT}}{sRT} X \\
+        X &= L_{\text{slow}} + \epsilon \\
+    \end{align*}
+
+    To calculate $X/\phi$ and equivalently $Y/\phi$, we set the $L$ and $n$ terms to zero. We're left with $X = Y = \epsilon$.
+
+    \begin{align*}
+        X &= \phi - D \\
+        D &= \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} s_{\text{fast}} + C_{\text{slow}} s_{\text{slow}}} \\
+        s_{\text{fast}} &= \frac{1 - e^{-sT}}{sT} X \\
+        s_{\text{slow}} &= \frac{1 - e^{-sRT}}{sRT} X \\
+    \end{align*}
+
+    This simplifies to
+
+    \begin{align*}
+        X &= \phi - \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}} X\\
+        X &\parens{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}} } = \phi\\
+        \frac{X}{\phi} &= \frac{1}{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}}\\
+    \end{align*}
+
+    For convenience we'll use the name $\text{plant} = \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}$. This means $X/\phi = Y/\phi = 1 / (1 + \text{plant})$.
+
+    To calculate $X/L_{\text{fast}}$ and $Y/L_{\text{fast}}$, we set $\phi$, $L_{\text{slow}}$, and the $n$ terms to zero.
+
+    \begin{align*}
+        X &= -\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} Y + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT} X} \\
+        Y &= L_{\text{fast}} + X \\
+    \end{align*}
+
+    We'll first eliminate $Y$ from this:
+
+    \begin{align*}
+        X &= -\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} \parens{L_{\text{fast}} + X} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT} X} \\
+        X & \parens{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}} = -L_{\text{fast}} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} C_{\text{fast}}\\
+        \frac{X}{L_{\text{fast}}} &= \frac{-\parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} C_{\text{fast}}}{1 + \text{plant}}.
+    \end{align*}
+
+    Then, we'll eliminate $X$:
+
+    \begin{align*}
+        Y - L_{\text{fast}} &= -\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} Y + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT} (Y - L_{\text{fast}})} \\
+        Y &\parens{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}} = L_{\text{fast}} \parens{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}\\
+        \frac{Y}{L_{\text{fast}}} &= \frac{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}{1 + \text{plant}}
+    \end{align*}
+
+    To calculate $X/L_{\text{slow}}$ and $Y/L_{\text{slow}}$, we set $\phi$, $L_{\text{fast}}$, and the $n$ terms to zero.
+
+    \begin{align*}
+        Y &= -\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} Y + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT} X} \\
+        X &= L_{\text{slow}} + Y \\
+    \end{align*}
+
+    We'll first eliminate $Y$ from this:
+
+    \begin{align*}
+        X - L_{\text{slow}} &= -\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} (X - L_{\text{slow}}) + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT} X} \\
+        X &\parens{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}} = L_{\text{slow}} \parens{1 + \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} C_{\text{fast}}}\\
+        \frac{X}{L_{\text{slow}}} &= \frac{1 + \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} C_{\text{fast}}}{1 + \text{plant}}.
+    \end{align*}
+
+    Then, we'll eliminate $X$:
+
+    \begin{align*}
+        Y &= -\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} Y + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT} (L_{\text{slow}} + Y)} \\
+        Y &\parens{1 + \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \frac{1 - e^{-sT}}{sT} + C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}} = L_{\text{slow}} \parens{-\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}\\
+        \frac{Y}{L_{\text{slow}}} &= \frac{-\parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} C_{\text{slow}} \frac{1 - e^{-sRT}}{sRT}}{1 + \text{plant}}
+    \end{align*}
+
+    For the $n$ transfer functions, we set $\phi, L_\text{fast}, L_\text{slow}$ to 0. This gives us $\epsilon = -D = X = Y$, so we can calculate just $X / n_\text{fast/slow}$, and the $Y$ ones will be the same.
+
+    \begin{align*}
+        -X &= \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} s_{\text{fast}} + C_{\text{slow}} s_{\text{slow}}} \\
+        s_{\text{fast}} &= n_{\text{fast}} + \frac{1 - e^{-sT}}{sT} X \\
+        s_{\text{slow}} &= n_{\text{slow}} + \frac{1 - e^{-sRT}}{sRT} X \\
+    \end{align*}
+
+    This gives us
+
+    \begin{align*}
+        -X &= \parens{\frac{1 - e^{-sT}}{sT}} e^{-sT} \parens{C_{\text{fast}} \parens{n_{\text{fast}} + \frac{1 - e^{-sT}}{sT} X} + C_{\text{slow}} \parens{n_{\text{slow}} + \frac{1 - e^{-sRT}}{sRT} X}} \\
+    \end{align*}
+
+    which simplifies to
+
+    \begin{align*}
+        -X \parens{C_\text{fast} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} + C_\text{slow} \parens{\frac{1 - e^{-sT}}{sT}} \parens{\frac{1 - e^{-sRT}}{sRT}}  e^{-sT}} = \frac{1 - e^{-sT}}{sT} e^{-sT} \parens{C_\text{fast} n_\text{fast} + C_\text{slow} n_\text{slow}}
+    \end{align*}
+
+    This gives us the following solution for all four noise transfer functions, which is the same for fast/slow other than the controller transfer function in the numerator.
+
+    \begin{align*}
+        \frac{X}{n_\text{fast/slow}} = \frac{-\frac{1 - e^{-sT}}{sT} e^{-sT} C_{\text{fast/slow}}}{C_\text{fast} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} + C_\text{slow} \parens{\frac{1 - e^{-sT}}{sT}} \parens{\frac{1 - e^{-sRT}}{sRT}}  e^{-sT}}
+    \end{align*}
+
+\end{document}

@@ -1,4 +1,5 @@
 using QuadGK
+using Base.Meta: parse
 
 function plant(sT, Cfast, Cslow, R)
     wfs_or_zoh = (1 - exp(-sT)) / sT
@@ -8,54 +9,110 @@ function plant(sT, Cfast, Cslow, R)
     return fast_term + slow_term
 end
 
-function phi_to_X(z, Cfast, Cslow, R)
-    return 1 / (1 + plant(z, Cfast, Cslow, R))
+function phi_to_X(sT, Cfast, Cslow, R)
+    return 1 / (1 + plant(sT, Cfast, Cslow, R))
 end
 
-function phi_to_Y(z, Cfast, Cslow, R)
-    return phi_to_X(z, Cfast, Cslow, R)
+function phi_to_Y(sT, Cfast, Cslow, R)
+    return phi_to_X(sT, Cfast, Cslow, R)
 end
 
-function Nfast_to_X(z, Cfast, Cslow, R)
-    return -(1/z) * Cfast(z) / (1 + plant(z, Cfast, Cslow, R))
+function Lfast_to_X(sT, Cfast, Cslow, R)
+    esT = exp(-sT)
+    return -((1 - esT)/sT)^2 * esT * Cfast(sT) / (1 + plant(sT, Cfast, Cslow, R))
 end
 
-function Nslow_to_X(z, Cfast, Cslow, R)
-    return -(1/z) * Cslow(z) / (1 + plant(z, Cfast, Cslow, R))
+function Lfast_to_Y(sT, Cfast, Cslow, R)
+    esT = exp(-sT)
+    return (1 + ((1 - esT) / sT) * esT * Cslow(sT) * ((1 - exp(-sT*R)) / (sT * R))) / (1 + plant(sT, Cfast, Cslow, R))
 end
 
-function Lfast_to_X(z, Cfast, Cslow, R)
-    return -(1/z^2) * Cfast(z) / (1 + plant(z, Cfast, Cslow, R))
+function Lslow_to_X(sT, Cfast, Cslow, R)
+    esT = exp(-sT)
+    return (1 + ((1 - esT) / sT)^2 * esT * Cfast(sT)) / (1 + plant(sT, Cfast, Cslow, R))
 end
 
-function Lfast_to_Y(z, Cfast, Cslow, R)
-    zinv = 1/z
-    return (1 + zinv * Cslow(z) * (1/R) * sum(zinv^k for k in 1:R)) / (1 + plant(z, Cfast, Cslow, R))
+function Lslow_to_Y(sT, Cfast, Cslow, R)
+    esT = exp(-sT)
+    return -((1 - esT) / sT) * esT * Cslow(sT) * (1 - exp(-sT*R)) / (sT * R) / (1 + plant(sT, Cfast, Cslow, R))
 end
 
-function Lslow_to_X(z, Cfast, Cslow, R)
-    return (1 + (1/z^2) * Cfast(z)) / (1 + plant(z, Cfast, Cslow, R))
+function noise_tf_prefactor(sT, Cfast, Cslow, R)
+    esT = exp(-sT)
+    half_delay = (1 - esT) / sT
+    numerator = -half_delay * esT
+    denominator = Cfast(sT) * half_delay^2 * esT + Cslow(sT) * ((1 - exp(-sT*R)) / (sT * R)) * half_delay * esT
+    return numerator / denominator
 end
 
-function Lslow_to_Y(z, Cfast, Cslow, R)
-    zinv = 1/z
-    return -zinv * Cslow(z) * (1/R) * sum(zinv^k for k in 1:R) / (1 + plant(z, Cfast, Cslow, R))
+function Nslow_to_X(sT, Cfast, Cslow, R)
+    return noise_tf_prefactor(sT, Cfast, Cslow, R) * Cslow(sT)
 end
 
-function notched_error_X(Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman; f_min=0.1, f_loop=1000.0)
+function Nslow_to_Y(sT, Cfast, Cslow, R)
+    return Nslow_to_X(sT, Cfast, Cslow, R)
+end
+
+function Nfast_to_X(sT, Cfast, Cslow, R)
+    return noise_tf_prefactor(sT, Cfast, Cslow, R) * Cfast(sT)
+end
+
+function Nfast_to_Y(sT, Cfast, Cslow, R)
+    return Nfast_to_X(sT, Cfast, Cslow, R)
+end
+
+function atm_error_at_f_X(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    sT = 2π * im * f / f_loop
+    psd_von_karman(f, vk_atm) * abs2(phi_to_X(sT, Cfast, Cslow, R))
+end
+
+function ncp_error_at_f_X(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    sT = 2π * im * f / f_loop
+    psd_von_karman(f, vk_ncp) * (abs2(Lfast_to_X(sT, Cfast, Cslow, R)) + abs2(Lslow_to_X(sT, Cfast, Cslow, R)))
+end
+
+function noise_error_at_f_X(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    sT = 2π * im * f / f_loop
+    noise_normalization * (abs2(Nfast_to_X(sT, Cfast, Cslow, R)) + abs2(Nslow_to_X(sT, Cfast, Cslow, R)))
+end
+
+function error_at_f_X(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    return atm_error_at_f_X(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop) + ncp_error_at_f_X(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop) + noise_error_at_f_X(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop)
+end
+
+function atm_error_at_f_Y(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    sT = 2π * im * f / f_loop
+    psd_von_karman(f, vk_atm) * abs2(phi_to_Y(sT, Cfast, Cslow, R))
+end
+
+function ncp_error_at_f_Y(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    sT = 2π * im * f / f_loop
+    psd_von_karman(f, vk_ncp) * (abs2(Lfast_to_Y(sT, Cfast, Cslow, R)) + abs2(Lslow_to_Y(sT, Cfast, Cslow, R)))
+end
+
+function noise_error_at_f_Y(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    sT = 2π * im * f / f_loop
+    noise_normalization * (abs2(Nfast_to_Y(sT, Cfast, Cslow, R)) + abs2(Nslow_to_Y(sT, Cfast, Cslow, R)))
+end
+
+function error_at_f_Y(f, Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, noise_normalization, f_loop)
+    return atm_error_at_f_Y(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop) + ncp_error_at_f_Y(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop) + noise_error_at_f_Y(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop)
+end
+
+function notched_error_X(Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, f_noise_crossover; f_min=0.1, f_loop=1000.0)
     f_max = f_loop / 2
-    f_to_z = f -> exp(2π * im * f / f_loop)
-    atm_error_squared = quadgk(f -> psd_von_karman(f, vk_atm) * abs2(phi_to_X(f_to_z(f), Cfast, Cslow, R)), f_min, f_max)[1]
-    ncp_error_squared = quadgk(f -> psd_von_karman(f, vk_ncp) * (abs2(Lfast_to_X(f_to_z(f), Cfast, Cslow, R)) + abs2(Lslow_to_X(f_to_z(f), Cfast, Cslow, R))), f_min, f_max)[1]
-    return sqrt(atm_error_squared + ncp_error_squared)
+    noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
+    return sqrt(
+        quadgk(f -> error_at_f_X(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop), f_min, f_max)[1]
+    )
 end
 
-function notched_error_Y(Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman; f_min=0.1, f_loop=1000.0)
+function notched_error_Y(Cfast, Cslow, R, vk_atm::VonKarman, vk_ncp::VonKarman, f_noise_crossover; f_min=0.1, f_loop=1000.0)
     f_max = f_loop / 2
-    f_to_z = f -> exp(2π * im * f / f_loop)
-    atm_error_squared = quadgk(f -> psd_von_karman(f, vk_atm) * abs2(phi_to_X(f_to_z(f), Cfast, Cslow, R)), f_min, f_max)[1]
-    ncp_error_squared = quadgk(f -> psd_von_karman(f, vk_ncp) * (abs2(Lfast_to_Y(f_to_z(f), Cfast, Cslow, R)) + abs2(Lslow_to_Y(f_to_z(f), Cfast, Cslow, R))), f_min, f_max)[1]
-    return sqrt(atm_error_squared + ncp_error_squared)
+    noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
+    return sqrt(
+        quadgk(f -> error_at_f_Y(f, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization, f_loop), f_min, f_max)[1]
+    )
 end
 
-export plant, phi_to_X, phi_to_Y, Nfast_to_X, Nslow_to_X, Lfast_to_X, Lslow_to_X, Lslow_to_Y, Lfast_to_Y, notched_error_X, notched_error_Y
+export plant, phi_to_X, phi_to_Y, Nfast_to_X, Nslow_to_X, Nfast_to_Y, Nslow_to_Y, Lfast_to_X, Lslow_to_X, Lslow_to_Y, Lfast_to_Y, error_at_f_X, atm_error_at_f_X, ncp_error_at_f_X, noise_error_at_f_X, atm_error_at_f_Y, ncp_error_at_f_Y, noise_error_at_f_Y, error_at_f_Y, notched_error_X, notched_error_Y

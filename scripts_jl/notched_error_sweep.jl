@@ -11,24 +11,21 @@ using ProgressMeter: @showprogress
 
 f_loop = 1000.0
 fr = 10 .^ (-2:0.01:log10(f_loop/2))
-sr = 2π .* im .* fr / f_loop
-zr = exp.(sr)
+sr = 2π .* im .* fr
+sT = sr / f_loop
 no_filter = ZPKFilter(0, 0, 1)
 vk_atm = VonKarman(v=10)
 vk_ncp = VonKarman(v=0.1, rms_target=0.8)
 
 function notched_errors(gain_slow, gain_fast, f_cutoff)
     ar1_high = ar1_filter(f_cutoff, f_loop, "high")
-    sys_high = AOSystem(f_loop, 1.0, gain_fast, 0.999, 10, ar1_high)
-    sys_low = AOSystem(f_loop / 10, 0.0, gain_slow, 0.999, 1, no_filter)
-    if !is_stable(sys_high) || !is_stable(sys_low)
-        return Inf, Inf
-    end
-    Cfast = z -> Hcont(sys_high, log(z)) * Hfilter(sys_high, log(z))
-    Cslow = z -> Hcont(sys_low, log(z))
+    sys_high = AOSystem(f_loop, 1.0, gain_fast, 0.999, 1, ar1_high)
+    sys_low = AOSystem(f_loop, 1.0, gain_slow, 0.999, 1, no_filter)
+    if !is_stable(sys_high) || !is_stable(sys_low) return Inf, Inf end
+    Cfast = sT -> Hcont(sys_high, sT * f_loop) * Hfilter(sys_high, sT * f_loop)
+    Cslow = sT -> Hcont(sys_low, sT * f_loop)
     notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp)
 end
-
 
 notched_errors(1.4, 0.4, 15)
 
@@ -52,7 +49,6 @@ idx_xmin = argmin(X_errors)
 gains_slow[idx_xmin[1]], gains_fast[idx_xmin[2]], cutoff_freqs[idx_xmin[3]]
 Y_errors[argmin(X_errors)]
 
-minimum(Y_errors)
-idx_ymin = argmin(Y_errors)
-gains_slow[idx_ymin[1]], gains_fast[idx_ymin[2]], cutoff_freqs[idx_ymin[3]]
-X_errors[argmin(Y_errors)]
+X_errors[Y_errors .>= 1.0] .= Inf
+argmin(X_errors)
+minimum(X_errors)
