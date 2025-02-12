@@ -1,7 +1,7 @@
 # Fdb version 4
-["pdflatex"] 1738606951.69408 "/Users/adityasengupta/projects/seal/multiwfs/tf_derivations/tf_derivations_s.tex" "tf_derivations_s.pdf" "tf_derivations_s" 1738606952.66338 0
+["pdflatex"] 1738616703.41439 "/Users/adityasengupta/projects/seal/multiwfs/tf_derivations/tf_derivations_s.tex" "tf_derivations_s.pdf" "tf_derivations_s" 1738616705.36792 0
   "/Users/adityasengupta/Library/texmf/tex/latex/latex-lectures/custom.sty" 1667878206.81406 2445 8b354cf0c57fe20f35158a234cd2b11f ""
-  "/Users/adityasengupta/projects/seal/multiwfs/tf_derivations/tf_derivations_s.tex" 1738606951.4271 7343 a5b21237b489de6fd702a76f3e67a14e ""
+  "/Users/adityasengupta/projects/seal/multiwfs/tf_derivations/tf_derivations_s.tex" 1738616702.49672 7351 b0b9d1393a7683a3b9b608595690a470 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1246382020 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -145,8 +145,8 @@
   "/usr/local/texlive/2024/texmf-var/web2c/pdftex/pdflatex.fmt" 1721512404 8221420 605004328a6e47ab96905df397143bf0 ""
   "/usr/local/texlive/2024/texmf.cnf" 1710266656 577 e590dabc9e28c5b61546e15f63eebcdf ""
   "blockdiag_full_s.pdf" 1737568339.33081 65241 a780e5a17c4ced9f91b8dc2e9a93cb81 ""
-  "tf_derivations_s.aux" 1738606952.57131 32 ab05033ccbb38b00a31b200ccedf8001 "pdflatex"
-  "tf_derivations_s.tex" 1738606951.4271 7343 a5b21237b489de6fd702a76f3e67a14e ""
+  "tf_derivations_s.aux" 1738616705.23772 32 ab05033ccbb38b00a31b200ccedf8001 "pdflatex"
+  "tf_derivations_s.tex" 1738616702.49672 7351 b0b9d1393a7683a3b9b608595690a470 ""
   (generated)
   "tf_derivations_s.aux"
   "tf_derivations_s.log"

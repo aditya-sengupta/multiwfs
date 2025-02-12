@@ -16,29 +16,36 @@ sT = sr / f_loop
 no_filter = ZPKFilter(0, 0, 1)
 vk_atm = VonKarman(v=10)
 vk_ncp = VonKarman(v=0.1, rms_target=0.8)
+f_noise_crossover = 200.0
+noise_normalization = psd_von_karman(200.0, vk_atm)
 
 function notched_errors(gain_slow, gain_fast, f_cutoff)
     ar1_high = ar1_filter(f_cutoff, f_loop, "high")
-    sys_high = AOSystem(f_loop, 1.0, gain_fast, 0.999, 1, ar1_high)
-    sys_low = AOSystem(f_loop, 1.0, gain_slow, 0.999, 1, no_filter)
-    if !is_stable(sys_high) || !is_stable(sys_low) return Inf, Inf end
-    Cfast = sT -> Hcont(sys_high, sT * f_loop) * Hfilter(sys_high, sT * f_loop)
-    Cslow = sT -> Hcont(sys_low, sT * f_loop)
-    notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp)
+    # f_loop, frame_delay, gain, leak, fpf
+    sys_fast = AOSystem(f_loop, 1.0, gain_fast, 0.999, 1, ar1_high)
+    sys_slow = AOSystem(f_loop / 10, 0.1, gain_slow, 0.999, 1, no_filter)
+    Cfast = sT -> Hcont(sys_fast, sT * f_loop) * Hfilter(sys_fast, sT * f_loop)
+    Cslow = sT -> Hcont(sys_slow, sT * f_loop)
+    if !is_stable(sys_slow)
+       return Inf, Inf 
+    end
+    notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover)
 end
 
 notched_errors(1.4, 0.4, 15)
+notched_errors(1.73, 0.75, 2)
+notched_errors(2.0, 0.75, 2.0)
 
-gains_slow = 0.0:0.1:2.0
-gains_fast = 0.0:0.1:1.0
-cutoff_freqs = 0.0:2.0:100.0
+gains_slow = 1.6:0.01:2.0
+gains_fast = 0.0:0.05:1.0
+cutoff_freqs = 0.0:1.0:5.0
 
 X_errors = zeros(length(gains_slow), length(gains_fast), length(cutoff_freqs))
 Y_errors = zeros(length(gains_slow), length(gains_fast), length(cutoff_freqs))
 
-@showprogress for i in 1:length(gains_slow)
-    for j in 1:length(gains_fast)
-        @threads for k in 1:length(cutoff_freqs)
+@showprogress for i in eachindex(gains_slow)
+    for j in eachindex(gains_fast)
+        @threads for k in eachindex(cutoff_freqs)
             X_errors[i,j,k], Y_errors[i,j,k] = notched_errors(gains_slow[i], gains_fast[j], cutoff_freqs[k])
         end
     end

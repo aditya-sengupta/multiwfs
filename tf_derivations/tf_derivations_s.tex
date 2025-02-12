@@ -110,13 +110,13 @@
     which simplifies to
 
     \begin{align*}
-        -X \parens{C_\text{fast} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} + C_\text{slow} \parens{\frac{1 - e^{-sT}}{sT}} \parens{\frac{1 - e^{-sRT}}{sRT}}  e^{-sT}} = \frac{1 - e^{-sT}}{sT} e^{-sT} \parens{C_\text{fast} n_\text{fast} + C_\text{slow} n_\text{slow}}
+        -X \parens{1 + C_\text{fast} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} + C_\text{slow} \parens{\frac{1 - e^{-sT}}{sT}} \parens{\frac{1 - e^{-sRT}}{sRT}}  e^{-sT}} = \frac{1 - e^{-sT}}{sT} e^{-sT} \parens{C_\text{fast} n_\text{fast} + C_\text{slow} n_\text{slow}}
     \end{align*}
 
     This gives us the following solution for all four noise transfer functions, which is the same for fast/slow other than the controller transfer function in the numerator.
 
     \begin{align*}
-        \frac{X}{n_\text{fast/slow}} = \frac{-\frac{1 - e^{-sT}}{sT} e^{-sT} C_{\text{fast/slow}}}{C_\text{fast} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} + C_\text{slow} \parens{\frac{1 - e^{-sT}}{sT}} \parens{\frac{1 - e^{-sRT}}{sRT}}  e^{-sT}}
+        \frac{X}{n_\text{fast/slow}} = \frac{-\frac{1 - e^{-sT}}{sT} e^{-sT} C_{\text{fast/slow}}}{1 + C_\text{fast} \parens{\frac{1 - e^{-sT}}{sT}}^2 e^{-sT} + C_\text{slow} \parens{\frac{1 - e^{-sT}}{sT}} \parens{\frac{1 - e^{-sRT}}{sRT}}  e^{-sT}}
     \end{align*}
 
 \end{document}

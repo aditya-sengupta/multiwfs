@@ -1,16 +1,21 @@
 using QuadGK
 using Base.Meta: parse
 
-function plant(sT, Cfast, Cslow, R)
+function plant(sT, Cfast, Cslow, R, dm_slow_rate=true)
     wfs_or_zoh = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)
     fast_term = Cfast(sT) * computational_delay * wfs_or_zoh^2
-    slow_term = Cslow(sT) * computational_delay * wfs_or_zoh * (1 - exp(-sT * R)) / (sT * R)
+    if dm_slow_rate
+        slow_term = Cslow(sT) * computational_delay * ((1 - exp(-sT * R)) / (sT * R))^2
+    else
+        slow_term = Cslow(sT) * computational_delay * wfs_or_zoh * ((1 - exp(-sT * R)) / (sT * R))
+
+    end
     return fast_term + slow_term
 end
 
-function phi_to_X(sT, Cfast, Cslow, R)
-    return 1 / (1 + plant(sT, Cfast, Cslow, R))
+function phi_to_X(sT, Cfast, Cslow, R, dm_slow_rate=true)
+    return 1 / (1 + plant(sT, Cfast, Cslow, R, dm_slow_rate))
 end
 
 function phi_to_Y(sT, Cfast, Cslow, R)
@@ -41,12 +46,16 @@ function noise_tf_prefactor(sT, Cfast, Cslow, R)
     esT = exp(-sT)
     half_delay = (1 - esT) / sT
     numerator = -half_delay * esT
-    denominator = Cfast(sT) * half_delay^2 * esT + Cslow(sT) * ((1 - exp(-sT*R)) / (sT * R)) * half_delay * esT
+    denominator = 1 + plant(sT, Cfast, Cslow, R)
     return numerator / denominator
 end
 
 function Nslow_to_X(sT, Cfast, Cslow, R)
-    return noise_tf_prefactor(sT, Cfast, Cslow, R) * Cslow(sT)
+    if imag(sT) < π / R
+        return noise_tf_prefactor(sT, Cfast, Cslow, R) * Cslow(sT)
+    else
+        return 0.0
+    end
 end
 
 function Nslow_to_Y(sT, Cfast, Cslow, R)
