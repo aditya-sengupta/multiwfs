@@ -51,7 +51,7 @@ md"""Note: Nslow term should only go up to Nyquist on the slow sensor (50 Hz)"""
 
 
 # ╔═╡ e0349f46-24e0-4b40-b578-c98ccddc9916
-setting = "optimal" # "optimal" or "lisa" or "slider"
+setting = "slider" # "optimal" or "lisa" or "slider"
 
 # ╔═╡ c1cc9909-f4dd-47c3-b0d5-4b097135412f
 @bind f_cutoff_s Slider(1.0:1.0:25.0)
@@ -93,22 +93,25 @@ begin
 	noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
 end;
 
-# ╔═╡ f7c6210d-1e30-489a-85b5-6a892fd6c2f6
+# ╔═╡ 01d4e780-802b-4df0-9000-40f997383162
 	begin
 	    plots_contrib = []
-	    for (v, sys) in zip(["X", "Y"], [sys_slow, Vector{multiwfs.AOSystem}([sys_slow, sys_fast])])
-			tfc = is_stable(sys) ? :green : :red
-	        ne = eval(parse("notched_error_$v"))
-	        p_v = plot(legend=:bottomleft, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual at $v (rad/Hz)", title="\n $v error = $(round(ne(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover), digits=3)) rad \n", titlefontcolor=tfc, ylims=(1e-10, 1e2))
-			for errsource in ["atm", "ncp", "noise"]
-				err_source_fn = eval(parse("$(errsource)_error_at_f_$v"))
-				plot!(fr, err_source_fn.(fr, Cfast, Cslow, 10, Ref(vk_atm), Ref(vk_ncp), noise_normalization, f_loop), label=errsource)
-			end
-			vline!([f_cutoff], color=:black, ls=:dash, label="HPF cutoff")
-	        push!(plots_contrib, p_v)
-	    end
-	    plot(plots_contrib..., suptitle="$setting: fc = $f_cutoff, gslow = $gain_slow, gfast = $gain_fast")
+		stable = is_stable(Vector{multiwfs.AOSystem}([sys_slow, sys_fast]))
+		tfc = stable ? :green : :red
+		errX, errY = notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover)
+		p_v = plot(legend=:bottomleft, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad/Hz)", title="X error = $(round(errX, digits=3)) rad, Y error = $(round(errY, digits=3)) rad", titlefontcolor=tfc, ylims=(1e-10, 1e2))
+		for errsource in ["atm_error_at_f_X", "ncp_error_at_f_X", "ncp_error_at_f_Y", "noise_error_at_f_X"]
+			err_source_fn = eval(parse(errsource))
+			plot!(fr, err_source_fn.(fr, Cfast, Cslow, 10, Ref(vk_atm), Ref(vk_ncp), noise_normalization, f_loop), label=errsource)
+		end
+		vline!([f_cutoff], color=:black, ls=:dash, label="HPF cutoff")
 	end
+
+# ╔═╡ bad74e0b-f9db-4107-96e0-315d706423f1
+begin
+	v = Vector{multiwfs.AOSystem}([sys_slow, sys_fast])
+	nyquist_plot(v)
+end
 
 # ╔═╡ 8fb4f1d2-1ae9-4cbd-9bba-3b02fe13d913
 begin
@@ -124,12 +127,6 @@ begin
 	    end
 	    plot(plots_etf...)
 	end
-
-# ╔═╡ bad74e0b-f9db-4107-96e0-315d706423f1
-begin
-	v = Vector{multiwfs.AOSystem}([sys_slow, sys_fast])
-	nyquist_plot(v)
-end
 
 # ╔═╡ 8131ee09-cb2b-4a0c-8e0b-3780f4899e78
 is_stable([sys_slow, sys_fast])
@@ -149,8 +146,8 @@ is_stable(Vector{multiwfs.AOSystem}([sys_slow, sys_fast]))
 # ╠═c1cc9909-f4dd-47c3-b0d5-4b097135412f
 # ╠═70a8f1c5-9fd6-4dde-b749-41fad1bb88ac
 # ╠═90676a3e-5808-4d86-9685-c386b6e02ad7
-# ╟─f7c6210d-1e30-489a-85b5-6a892fd6c2f6
-# ╟─8fb4f1d2-1ae9-4cbd-9bba-3b02fe13d913
+# ╟─01d4e780-802b-4df0-9000-40f997383162
 # ╠═bad74e0b-f9db-4107-96e0-315d706423f1
+# ╟─8fb4f1d2-1ae9-4cbd-9bba-3b02fe13d913
 # ╠═8131ee09-cb2b-4a0c-8e0b-3780f4899e78
 # ╠═1b292952-30a4-4c18-89b4-c97d29ed4a07

@@ -1,18 +1,18 @@
-mutable struct AOSystem{F}
+mutable struct AOSystem{F,D}
     f_loop::Float64
     Ts::Float64
     frame_delay::Float64
     τ::Float64
-    gain::Float64
-    leak::Float64
+    gain::D
+    leak::D
     fpf::Int64
-    control_filter::F 
+    control_filter::F
 
     function AOSystem(f_loop, frame_delay, gain, leak, fpf, control_filter)
         Ts = 1 / f_loop
         frame_delay = floor(frame_delay) + round((frame_delay-floor(frame_delay))*fpf)/fpf
         τ = frame_delay * Ts
-        new{typeof(control_filter)}(f_loop, Ts, frame_delay, τ, gain, leak, fpf, control_filter)
+        new{typeof(control_filter),typeof(gain)}(f_loop, Ts, frame_delay, τ, gain, leak, fpf, control_filter)
     end
 end
 
@@ -47,7 +47,7 @@ end
 
 function Hcont(ao::AOSystem{LQG}, s)
     tf = transfer_function(ao.control_filter, s ./ ao.f_loop)
-    return tf / (1 + tf)
+    return tf# / (1 + tf)
 end
 
 function Hfilter(ao::AOSystem, s)

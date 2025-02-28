@@ -7,16 +7,21 @@ using QuadGK
 struct VonKarman
     f₀::Float64
     prefactor::Float64
+    vkexp::Float64
 
-    function VonKarman(;D=3, v=10, rms_target=8, f_loop=1000)
+    function VonKarman(;D=3, v=10, rms_target=8, vkexp=-11/3, f_loop=1000)
         f₀ = v / D
-        prefactor = rms_target^2 / quadgk(f -> (f + f₀)^(-11/3), 0, f_loop/2)[1]
-        new(f₀, prefactor)
+        prefactor = rms_target^2 / quadgk(f -> (f + f₀)^(vkexp), 0, f_loop/2)[1]
+        new(f₀, prefactor, vkexp)
+    end
+
+    function VonKarman(f₀, prefactor, vkexp=-2)
+        new(f₀, prefactor, vkexp)
     end
 end
 
 function psd_von_karman(f, vk::VonKarman)
-    return vk.prefactor * (f + vk.f₀)^(-11/3)
+    return vk.prefactor * (f + vk.f₀)^(vk.vkexp)
 end
 
 function von_karman_turbulence(nframes=1000; fpf=10, f_loop=1000, offset=10/3)

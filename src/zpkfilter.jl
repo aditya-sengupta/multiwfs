@@ -8,19 +8,19 @@ function f2s(f)
     return 1im * 2.0 * π * f
 end
 
-struct ZPKFilter{Nz,Np,Nm}
-    z::SVector{Nz,ComplexF64}
-    p::SVector{Np,ComplexF64}
-    k::Float64
-    prev_x::MVector{Nm,ComplexF64}
-    prev_y::MVector{Nm,ComplexF64}
+struct ZPKFilter{Nz,Np,Nm,Dc,Df}
+    z::SVector{Nz,Dc}
+    p::SVector{Np,Dc}
+    k::Df
+    prev_x::MVector{Nm,Dc}
+    prev_y::MVector{Nm,Dc}
 
     function ZPKFilter(z::AbstractArray, p::AbstractArray, k::Number)
         Nz, Np = length(z), length(p)
         Nm = max(Nz, Np)
-        x = @MVector zeros(ComplexF64,Nm)
-        y = @MVector zeros(ComplexF64,Nm)
-        new{Nz,Np,Nm}(z, p, k, x, y)
+        x = @MVector zeros(typeof(z[1]),Nm)
+        y = @MVector zeros(typeof(z[1]),Nm)
+        new{Nz,Np,Nm,typeof(z[1]),typeof(k)}(z, p, k, x, y)
     end
 
     function ZPKFilter(z::Number, p::Number, k::Number)
@@ -66,9 +66,9 @@ end
 function ar1_filter(f_cutoff, f_loop, filter_type)
     α = ar1_coeff(f_cutoff, f_loop)
     if filter_type == "high"
-        return ZPKFilter(1, α, α)
+        return ZPKFilter(one(f_cutoff), α, α)
     elseif filter_type == "low"
-        return ZPKFilter(0, α, 1 - α)
+        return ZPKFilter(zero(f_cutoff), α, 1 - α)
     end
 end
 
