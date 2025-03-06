@@ -4,6 +4,7 @@ module multiwfs
     using Plots
 
     include("lqg.jl")
+    include("double_integrator.jl")
     include("open_loop_timeseries.jl")
     include("turbulence_dynamics_models.jl")
     include("twowfs_tfs.jl")

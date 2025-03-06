@@ -51,7 +51,7 @@ md"""Note: Nslow term should only go up to Nyquist on the slow sensor (50 Hz)"""
 
 
 # ╔═╡ e0349f46-24e0-4b40-b578-c98ccddc9916
-setting = "slider" # "optimal" or "lisa" or "slider"
+setting = "optimal" # "optimal" or "lisa" or "slider"
 
 # ╔═╡ c1cc9909-f4dd-47c3-b0d5-4b097135412f
 @bind f_cutoff_s Slider(1.0:1.0:25.0)
@@ -66,7 +66,7 @@ setting = "slider" # "optimal" or "lisa" or "slider"
 begin
 	f_cutoff, gain_slow, gain_fast = nothing, nothing, nothing
 	if setting ==  "optimal"
-		f_cutoff, gain_slow, gain_fast = 2.0, 1.74, 0.75
+		f_cutoff, gain_slow, gain_fast = 1.0, 1.77, 0.74
 	elseif setting == "lisa"
 		f_cutoff, gain_slow, gain_fast = 15.0, 1.4, 0.4
 	elseif setting == "slider"
@@ -77,7 +77,7 @@ end;
 # ╔═╡ 0c8d2a1c-f2e6-4c22-bc0c-c84027bf386b
 begin	
 	f_loop = 1000.0
-	f_noise_crossover = 200.0
+	f_noise_crossover = 500.0
 	fr = 10 .^ (-2:0.01:log10(f_loop/2))
 	sr = 2π .* im .* fr
 	sT = sr / f_loop
@@ -100,7 +100,7 @@ end;
 		tfc = stable ? :green : :red
 		errX, errY = notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover)
 		p_v = plot(legend=:bottomleft, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad/Hz)", title="X error = $(round(errX, digits=3)) rad, Y error = $(round(errY, digits=3)) rad", titlefontcolor=tfc, ylims=(1e-10, 1e2))
-		for errsource in ["atm_error_at_f_X", "ncp_error_at_f_X", "ncp_error_at_f_Y", "noise_error_at_f_X"]
+		for errsource in ["atm_error_at_f_X", "ncp_error_at_f_X", "noise_error_at_f_X"]
 			err_source_fn = eval(parse(errsource))
 			plot!(fr, err_source_fn.(fr, Cfast, Cslow, 10, Ref(vk_atm), Ref(vk_ncp), noise_normalization, f_loop), label=errsource)
 		end
@@ -141,12 +141,12 @@ is_stable(Vector{multiwfs.AOSystem}([sys_slow, sys_fast]))
 # ╟─32d82de9-46e7-4a80-94a2-54859ba92ce7
 # ╠═ab7b9241-99f7-462c-8673-97c82208e5a4
 # ╠═0c8d2a1c-f2e6-4c22-bc0c-c84027bf386b
-# ╟─9303f6a9-88a7-4545-bb9f-8656b9b31e74
+# ╠═9303f6a9-88a7-4545-bb9f-8656b9b31e74
 # ╠═e0349f46-24e0-4b40-b578-c98ccddc9916
 # ╠═c1cc9909-f4dd-47c3-b0d5-4b097135412f
 # ╠═70a8f1c5-9fd6-4dde-b749-41fad1bb88ac
 # ╠═90676a3e-5808-4d86-9685-c386b6e02ad7
-# ╟─01d4e780-802b-4df0-9000-40f997383162
+# ╠═01d4e780-802b-4df0-9000-40f997383162
 # ╠═bad74e0b-f9db-4107-96e0-315d706423f1
 # ╟─8fb4f1d2-1ae9-4cbd-9bba-3b02fe13d913
 # ╠═8131ee09-cb2b-4a0c-8e0b-3780f4899e78
