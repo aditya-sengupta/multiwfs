@@ -1,8 +1,6 @@
 using multiwfs
-using multiwfs: Hcont, Hfilter, is_stable
 using Plots
 using Base: product
-using Base.Meta: parse
 using Base.Threads: @threads
 using ProgressMeter: @showprogress
 using Optim
@@ -33,24 +31,22 @@ function notched_errors(α, β, gain_fast, f_cutoff)
     if α < 0 || gain_fast < 0 || f_cutoff < 0
         return Inf, Inf
     end
-    sys_fast, sys_slow = nothing, nothing
-    try
-        sys_fast, sys_slow = systems(α, β, gain_fast, f_cutoff)
-    catch
-        return Inf, Inf
-    end
+    sys_fast, sys_slow = systems(α, β, gain_fast, f_cutoff)
     Cfast = sT -> Hcont(sys_fast, sT * f_loop) * Hfilter(sys_fast, sT * f_loop)
     Cslow = sT -> Hcont(sys_slow, sT * f_loop) * Hfilter(sys_slow, sT * f_loop)
-    if !is_stable(Vector{AOSystem}([sys_fast, sys_slow]))
+    if !is_stable((sys_fast, sys_slow))
        return Inf, Inf
     end
     err_X, err_Y = notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover, f_min=1.0), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover, f_min=1.0)
     return err_X, err_Y
 end
 
-notched_errors(0.995, -0.5, 0.4, 15.0)
+notched_errors(0.995, 0.0, 0.4, 15.0)
 
-nyquist_plot(Vector{AOSystem}([systems(0.995, -0.6, 0.4, 15.0)...]))
+nyquist_plot(systems(0.995, -0.1, 0.4, 15.0))
+
+s = systems(0.995, -0.1, 0.4, 15.0)
+ten_etf_plots(controller(s[1]), controller(s[2]), 10, vk_atm, vk_ncp, noise_normalization)
 
 alphas = 0.99:0.001:0.999
 betas = -0.1:0.01:0.01
@@ -74,6 +70,12 @@ argmin(X_errors)
 minimum(X_errors)
 
 notched_errors(0.9999, -0.1, 0.52, 32.155)
+
+pars = [0.995, -0.08, 0.4, 10.0]
+sys_fast, sys_slow = systems(pars...)
+Cfast = sT -> Hcont(sys_fast, sT * f_loop)(sys_fast, sT * f_loop)
+Cslow = sT -> Hcont(sys_slow, sT * f_loop)
+plot_integrands(Cfast, Cslow, 10, vk_atm, vk_ncp, noise_normalization)
 
 begin
     plots_contrib = []

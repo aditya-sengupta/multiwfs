@@ -1,6 +1,33 @@
 using QuadGK
 using Base.Meta: parse
 
+struct TwoWFSSimulation
+    sys_fast::AOSystem
+    sys_slow::AOSystem
+    f_loop::Float64
+    fr::Vector{Float64}
+    sr::Vector{ComplexF64}
+    sT::Vector{ComplexF64}
+    R::Int64
+    vk_atm::VonKarman
+    vk_ncp::VonKarman
+    f_noise_crossover::Float64
+    noise_normalization::Float64
+    f_min_cost::Float64
+
+    function TwoWFSSimulation(sys_fast, sys_slow, R, vk_atm, vk_ncp, f_noise_crossover; f_min_eval=0.01, f_min_cost=1.0, n_freq_points=470)
+        f_loop = sys_fast.f_loop
+        log_f_min_eval = log10(f_min_eval)
+        log_f_max = log10(f_loop/2)
+        log_f_step = (log_f_max - log_f_min_eval) / (n_freq_points - 1)
+        fr = exp10.(log_f_min_eval:log_f_step:log_f_max)
+        sr = 2π .* im * fr
+        sT = sr .* f_loop
+        noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
+        new(sys_fast, sys_slow, f_loop, fr, sr, sT, R, vk_atm, vk_ncp, f_noise_crossover, noise_normalization, f_min_cost)
+    end
+end
+
 function plant(sT, Cfast, Cslow, R, dm_slow_rate=true)
     wfs_or_zoh = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)

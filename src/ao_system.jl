@@ -42,7 +42,7 @@ function Hlint(ao::AOSystem, s)
 end
 
 function Hcont(ao::AOSystem, s)
-    return Hlint(ao, s)
+    return Hlint(ao, s) * Hfilter(ao, s)
 end
 
 function Hcont(ao::AOSystem{LQG}, s)
@@ -85,4 +85,8 @@ function Hn(ao::AOSystem, f)
     return Hcl(ao, f) / Hwfs(ao, f2s(f))
 end
 
-export AOSystem, Hol, Hol_unfiltered, Hcl, Hrej
+function controller(sys, f_loop=1000.0)
+    return sT -> Hcont(sys, sT * f_loop) * Hfilter(sys, sT * f_loop)
+end
+
+export AOSystem, Hol, Hol_unfiltered, Hcl, Hrej, Hcont, Hfilter, controller

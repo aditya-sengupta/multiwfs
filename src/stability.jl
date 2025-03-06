@@ -18,12 +18,12 @@ function angle_relative_to_minus1(z)
     return 180 - abs(rad2deg(angle(z)))
 end
 
-function Hol(systems::Vector{AOSystem}, f)
+function Hol(systems::Union{Tuple,AbstractArray}, f)
     return sum(Hol(sys, f) for sys in systems)
 end
 
 function nyquist_and_margins(sys)
-    if sys isa Vector
+    if sys isa Tuple || sys isa AbstractArray
         f_loop = maximum(s.f_loop for s in sys)
     else
         f_loop = sys.f_loop
@@ -112,4 +112,4 @@ function ar1_gain_map(sys, filter_type; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:
     gain_map
 end
 
-export ar1_gain_map, search_gain!, zero_db_bandwidth, get_nyquist_contour, margins
+export ar1_gain_map, search_gain!, zero_db_bandwidth, get_nyquist_contour, margins, is_stable
