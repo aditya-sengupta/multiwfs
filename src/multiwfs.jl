@@ -3,13 +3,10 @@ module multiwfs
     using Base.Threads
     using Plots
 
-    include("lqg.jl")
-    include("double_integrator.jl")
-    include("open_loop_timeseries.jl")
-    include("turbulence_dynamics_models.jl")
-    include("twowfs_tfs.jl")
+    include("plant.jl")
     include("zpkfilter.jl")
-    include("ao_system.jl")
+    include("controller.jl")
+    include("simulation.jl")
     include("stability.jl")
     include("performance.jl")
     include("plotting.jl")

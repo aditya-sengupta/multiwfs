@@ -1,8 +1,21 @@
 using LinearAlgebra: I
 
+abstract type Controller end
+
 include("make_lqg.jl")
 
-struct LQG
+struct FilteredIntegrator{D,F} <: Controller
+    gain::D
+    leak::D
+    cfilter::F
+    Ts::Float64
+end
+
+function transfer_function(fi::FilteredIntegrator, s)
+    fi.gain / (1.0 - fi.leak * exp(-fi.Ts * s)) * transfer_function(fi.cfilter, fi.Ts * s)
+end
+
+struct LQG <: Controller
     A::Matrix{Float64}
     D::Matrix{Float64}
     C::Matrix{Float64}
