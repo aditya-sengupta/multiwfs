@@ -38,4 +38,4 @@ function transfer_function(lqg::LQG, s::Complex)
     return numerator * (zinv) / denominator
 end
 
-export LQG, transfer_function
+export FilteredIntegrator, LQG, transfer_function

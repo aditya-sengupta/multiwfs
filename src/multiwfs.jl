@@ -3,6 +3,7 @@ module multiwfs
     using Base.Threads
     using Plots
 
+    include("von_karman.jl")
     include("plant.jl")
     include("zpkfilter.jl")
     include("controller.jl")

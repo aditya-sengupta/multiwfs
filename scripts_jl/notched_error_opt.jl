@@ -1,45 +1,19 @@
 using multiwfs
-using multiwfs: Hcont, Hfilter, is_stable
-using Plots
-using Base: product
-using Base.Meta: parse
-using Base.Threads: @threads
-using ProgressMeter: @showprogress
-using Optim
-using ForwardDiff: gradient, jacobian
 
-f_loop = 1000.0
-fr = 10 .^ (-2:0.01:log10(f_loop/2))
-sr = 2π .* im .* fr
-sT = sr / f_loop
-no_filter = ZPKFilter(0, 0, 1)
 r0 = 0.1031
+r0_ncp = 1.0
 vk_atm = VonKarman(0.3 * 10.0 / 3.0, 0.25 * r0^(-5/3))
-f_noise_crossover = 500.0
-noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
+vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 
-function systems(gain_slow, gain_fast, f_cutoff)
-    ar1_high = ar1_filter(f_cutoff, f_loop, "high")
-    # f_loop, frame_delay, gain, leak, fpf
-    sys_fast = AOSystem(f_loop, 1.0, gain_fast, 0.999, 1, ar1_high)
-    sys_slow = AOSystem(f_loop / 10, 0.1, gain_slow, 0.999, 1, no_filter)
-    return sys_fast, sys_slow
-end
+# fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover
+f_loop = 1000.0
+R = 10
+fast_controller = FilteredIntegrator(0.4, 0.999, ar1_filter(15.0, f_loop, "high"), 1/f_loop)
+slow_controller = FilteredIntegrator(1.4, 0.999, ZPKFilter(0, 0, 1), R/f_loop)
+sim = Simulation(f_loop, fast_controller, slow_controller, 10, vk_atm, vk_ncp, 500.0)
 
-function notched_errors(gain_slow, gain_fast, f_cutoff, vk_ncp)
-    if gain_slow > 2.0
-        return Inf, Inf
-    end
-    sys_fast, sys_slow = systems(gain_slow, gain_fast, f_cutoff)
-    Cfast = sT -> Hcont(sys_fast, sT * f_loop) * Hfilter(sys_fast, sT * f_loop)
-    Cslow = sT -> Hcont(sys_slow, sT * f_loop)
-    margin_values = margins(Vector{AOSystem}([sys_fast, sys_slow]))
-    if margin_values.gm < 2.5 || margin_values.pm < 45
-        return Inf, Inf
-    end
-    err_X, err_Y = notched_error_X(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover, f_min=1.0), notched_error_Y(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover, f_min=1.0)
-    return err_X, err_Y
-end
+notched_error_X(sim)
+notched_error_Y(sim)
 
 gains_slow = 0.0:0.1:2.0
 gains_fast = 0.0:0.1:1.0
