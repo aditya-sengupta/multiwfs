@@ -27,7 +27,7 @@ struct Simulation{C1,C2}
         log_f_step = (log_f_max - log_f_min_eval) / (n_freq_points - 1)
         fr = exp10.(log_f_min_eval:log_f_step:log_f_max)
         sr = 2π .* im * fr
-        sT = sr .* f_loop
+        sT = sr ./ f_loop
         noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
         fast_plant = Plant(f_loop, frame_delay, fpf)
         slow_plant = Plant(f_loop / R, frame_delay / R, fpf)
@@ -39,9 +39,9 @@ end
 function plant(sT, sim::Simulation, dm_slow_rate=true)
     wfs_or_zoh = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)
-    fast_term = transfer_function(sim.fast_controller, sT) * computational_delay * wfs_or_zoh^2
+    fast_term = transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * wfs_or_zoh^2
     if dm_slow_rate
-        slow_term = transfer_function(sim.slow_controller, sT) * computational_delay * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2
+        slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * computational_delay * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2
     else
         slow_term = transfer_function(sim.slow_controller, sT) * computational_delay * wfs_or_zoh * ((1 - exp(-sT * sim.R)) / (sT * sim.R))
 
@@ -57,22 +57,22 @@ phi_to_Y = phi_to_X
 
 function Lfast_to_X(sT, sim::Simulation)
     esT = exp(-sT)
-    return -((1 - esT)/sT)^2 * esT * transfer_function(sim.fast_controller, sT) / (1 + plant(sT, sim))
+    return -((1 - esT)/sT)^2 * esT * transfer_function(sim.fast_controller, sT * sim.f_loop) / (1 + plant(sT, sim))
 end
 
 function Lfast_to_Y(sT, sim::Simulation)
     esT = exp(-sT)
-    return (1 + ((1 - esT) / sT) * esT * transfer_function(sim.slow_controller, sT) * ((1 - exp(-sT*sim.R)) / (sT * sim.R))) / (1 + plant(sT, sim))
+    return (1 + ((1 - esT) / sT) * esT * transfer_function(sim.slow_controller, sT * sim.f_loop) * ((1 - exp(-sT*sim.R)) / (sT * sim.R))) / (1 + plant(sT, sim))
 end
 
 function Lslow_to_X(sT, sim::Simulation)
     esT = exp(-sT)
-    return (1 + ((1 - esT) / sT)^2 * esT * transfer_function(sim.fast_controller, sT)) / (1 + plant(sT, sim))
+    return (1 + ((1 - esT) / sT)^2 * esT * transfer_function(sim.fast_controller, sT * sim.f_loop)) / (1 + plant(sT, sim))
 end
 
 function Lslow_to_Y(sT, sim::Simulation)
     esT = exp(-sT)
-    return -((1 - esT) / sT) * esT * transfer_function(sim.slow_controller, sT) * (1 - exp(-sT*sim.R)) / (sT * sim.R) / (1 + plant(sT, sim))
+    return -((1 - esT) / sT) * esT * transfer_function(sim.slow_controller, sT * sim.f_loop) * (1 - exp(-sT*sim.R)) / (sT * sim.R) / (1 + plant(sT, sim))
 end
 
 function noise_tf_prefactor(sT, sim::Simulation)
@@ -85,7 +85,7 @@ end
 
 function Nslow_to_X(sT, sim::Simulation)
     if imag(sT) < π / sim.R
-        return noise_tf_prefactor(sT, sim) * transfer_function(sim.slow_controller, sT)
+        return noise_tf_prefactor(sT, sim) * transfer_function(sim.slow_controller, sT * sim.f_loop)
     else
         return 0.0
     end
@@ -94,7 +94,7 @@ end
 Nslow_to_Y = Nslow_to_X
 
 function Nfast_to_X(sT, sim::Simulation)
-    return noise_tf_prefactor(sT, sim) * transfer_function(sim.fast_controller, sT)
+    return noise_tf_prefactor(sT, sim) * transfer_function(sim.fast_controller, sT * sim.f_loop)
 end
 
 Nfast_to_Y = Nfast_to_X

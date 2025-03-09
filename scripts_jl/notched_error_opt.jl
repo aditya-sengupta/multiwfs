@@ -15,6 +15,29 @@ sim = Simulation(f_loop, fast_controller, slow_controller, 10, vk_atm, vk_ncp, 5
 notched_error_X(sim)
 notched_error_Y(sim)
 
+r0_ncp = 1.0
+vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
+
+notched_errors(1.4, 0.4, 15.0, vk_ncp)
+
+sys_fast, sys_slow = systems(1.4, 0.4, 15.0)
+Cfast = sT -> Hcont(sys_fast, sT * f_loop) * Hfilter(sys_fast, sT * f_loop)
+Cslow = sT -> Hcont(sys_slow, sT * f_loop)
+
+begin
+    plots_etf = []
+    for v in ["X", "Y"]
+        ne = eval(parse("notched_error_$v"))
+        p_v = plot(legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(Cfast, Cslow, 10, vk_atm, vk_ncp, f_noise_crossover), digits=3)) rad")
+        for (fname, c, s) in zip(["phi_to_$v", "Lfast_to_$v", "Lslow_to_$v", "Nfast_to_$v", "Nslow_to_$v"], [1, 2, 2, 3, 3], [:solid, :solid, :dash, :solid, :dash])
+            f = eval(parse(fname))
+            plot!(fr, abs2.(f.(sT, Cfast, Cslow, 10)), label="|$fname|²", c=c, ls=s)
+        end
+        push!(plots_etf, p_v)
+    end
+    plot(plots_etf...)
+end
+
 gains_slow = 0.0:0.1:2.0
 gains_fast = 0.0:0.1:1.0
 cutoff_freqs = 0.0:2.0:40.0
