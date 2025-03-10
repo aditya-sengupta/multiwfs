@@ -19,6 +19,8 @@ plot(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim))), xscale=:log10, yscale=:log10)
 notched_error_X(sim)
 notched_error_Y(sim)
 
+nyquist_plot(sim)
+
 begin
     plots_etf = []
     for v in ["X", "Y"]

@@ -18,29 +18,20 @@ function angle_relative_to_minus1(z)
     return 180 - abs(rad2deg(angle(z)))
 end
 
-function Hol(systems::Union{Tuple,AbstractArray}, f)
-    return sum(Hol(sys, f) for sys in systems)
-end
-
-function nyquist_and_margins(sys)
-    if sys isa Tuple || sys isa AbstractArray
-        f_loop = maximum(s.f_loop for s in sys)
-    else
-        f_loop = sys.f_loop
-    end
-    f = (0.001, f_loop / 2 + 0.001)
+function nyquist_and_margins(sim)
     gm, gm_point, pm, pm_point = Inf, nothing, 180, nothing
-    oneside_freq = range(minimum(f), maximum(f), length=2001)
-    linfreq = vcat(-reverse(oneside_freq), oneside_freq)
-    nyquist_contour = Hol.(Ref(sys), linfreq)
-    imag_axis_crossings = zero_crossings(freq -> imag(Hol(sys, freq)), linfreq, imag.(nyquist_contour))
-    gm_candidate_points = Hol.(Ref(sys), imag_axis_crossings)
+    oneside_freq = range(0.001, sim.f_loop / 2 + 0.001, length=2001)
+    twoside_fr = vcat(-reverse(oneside_freq), oneside_freq)
+    twoside_sT = 2π * im * twoside_fr / sim.f_loop
+    nyquist_contour = plant.(twoside_sT, Ref(sim))
+    imag_axis_crossings = zero_crossings(freq -> imag(plant(2π * im * freq / sim.f_loop, sim)), twoside_fr, imag.(nyquist_contour))
+    gm_candidate_points = plant.(imag_axis_crossings * 2π * im / sim.f_loop, Ref(sim))
     if length(gm_candidate_points) > 0
         gm_point = minimum(real(x) for x in gm_candidate_points if (!isnan(x)) & (real(x) > -1))
         gm = -1 / real(gm_point)
     end
-    unit_circle_crossings = zero_crossings(freq -> abs2(Hol(sys, freq)) - 1, linfreq, abs2.(nyquist_contour) .- 1)
-    pm_candidate_points = Hol.(Ref(sys), unit_circle_crossings)
+    unit_circle_crossings = zero_crossings(freq -> abs2(plant(freq * 2π * im / sim.f_loop, sim)) - 1, twoside_fr, abs2.(nyquist_contour) .- 1)
+    pm_candidate_points = plant.(unit_circle_crossings * 2π * im / sim.f_loop, Ref(sim))
     if length(pm_candidate_points) > 0
         pm_point = pm_candidate_points[argmin(angle_relative_to_minus1.(pm_candidate_points))]
         pm = angle_relative_to_minus1(pm_point)
@@ -48,14 +39,14 @@ function nyquist_and_margins(sys)
     return nyquist_contour, gm, gm_point, pm, pm_point
 end
 
-function margins(sys)
-    _, gm, _, pm, _ = nyquist_and_margins(sys)
+function margins(sim)
+    _, gm, _, pm, _ = nyquist_and_margins(sim)
     return (gm=gm, pm=pm)
 end
 
-function is_stable(sys)
+function is_stable(sim)
     try
-        _, gm, _, pm, _ = nyquist_and_margins(sys)
+        _, gm, _, pm, _ = nyquist_and_margins(sim)
         return is_stable(gm, pm)
     catch
         return false
@@ -66,50 +57,41 @@ function is_stable(gm, pm)
     return gm > 2.5 && pm >= 45.0
 end
 
-function search_gain!(sys)
-    sys.gain = 1.0
+function search_gain!(sim, controller_name)
+    con = nothing
+    if controller_name == "fast"
+        con = sim.fast_controller
+    elseif controller_name == "slow"
+        con = sim.slow_controller
+    end
+    con.gain = 2.0
     gain_min, gain_max = 1e-15, 1.0
     while gain_max - gain_min > 1e-15
-        if is_stable(sys)
-            gain_min = sys.gain
+        if is_stable(sim)
+            gain_min = con.gain
         else
-            gain_max = sys.gain
+            gain_max = con.gain
         end
-        sys.gain = (gain_min + gain_max) / 2
+        con.gain = (gain_min + gain_max) / 2
     end
-    if !is_stable(sys)
-        sys.gain = sys.gain - 1e-15
+    if !is_stable(sim)
+        con.gain = con.gain - 1e-15
     end
-    sys.gain
+    con.gain
 end
 
-function zero_db_bandwidth(sys)
+function zero_db_bandwidth(plant, controller)
     try
         # try to solve via root-finding
-        return find_zero(f -> abs(Hol(sys, f)) - 1.0, (0.1, 500.0))
+        return find_zero(f -> abs(transfer_function(plant, 2π * im * f) * transfer_function(controller, 2π * im * f)) - 1.0, (0.1, 500.0))
     catch
         # fall back to grid evaluation
         f = 0.1:0.1:500.0
-        abs_Hol_val = abs.(Hol.(Ref(sys), f))
+        abs_Hol_val = abs.(transfer_function.(Ref(plant), 2π * im * f) * transfer_function(Ref(controller), 2π * im * f))
         fstart = argmax(abs_Hol_val)
         fend = findlast(abs_Hol_val .<= 1.0)
         return f[fstart:fend][findfirst(abs_Hol_val[fstart:fend] .<= 1.0)]
     end
 end    
 
-function ar1_gain_map(sys, filter_type; f_cutoffs = 0.1:0.1:100.0, delays = 0.0:0.1:1.0, save=true)
-    gain_map = zeros(length(f_cutoffs), length(delays));
-    @showprogress @threads for (i, fc) in collect(enumerate(f_cutoffs))
-        for (j, d) in enumerate(delays)
-            tsys = AOSystem(sys.f_loop, d, sys.gain, sys.leak, sys.fpf, ar1_filter(fc, sys.f_loop, filter_type))
-            search_gain!(tsys)
-            gain_map[i,j] = tsys.gain
-        end
-    end
-    if save
-        npzwrite("data/gainmap_loopfreq_$(sys.f_loop)_ftype_$filter_type.npy", gain_map)
-    end
-    gain_map
-end
-
-export ar1_gain_map, search_gain!, zero_db_bandwidth, get_nyquist_contour, margins, is_stable
+export search_gain!, zero_db_bandwidth, get_nyquist_contour, margins, is_stable

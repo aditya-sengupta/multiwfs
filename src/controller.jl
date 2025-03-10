@@ -4,7 +4,7 @@ abstract type Controller end
 
 include("make_lqg.jl")
 
-struct FilteredIntegrator{D,F} <: Controller
+mutable struct FilteredIntegrator{D,F} <: Controller
     gain::D
     leak::D
     cfilter::F

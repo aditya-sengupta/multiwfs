@@ -5,8 +5,6 @@ struct Simulation{C1,C2}
     f_loop::Float64
     fast_controller::C1
     slow_controller::C2
-    fast_plant::Plant
-    slow_plant::Plant
     fr::Vector{Float64}
     sr::Vector{ComplexF64}
     sT::Vector{ComplexF64}
@@ -18,7 +16,7 @@ struct Simulation{C1,C2}
     f_min_cost::Float64
     f_max::Float64
 
-    function Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover; f_min_eval=0.01, f_min_cost=1.0, n_freq_points=470, frame_delay=1.0, fpf=1, f_max=nothing)
+    function Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover; f_min_eval=0.001, f_min_cost=1.0, n_freq_points=470, frame_delay=1.0, fpf=1, f_max=nothing)
         if isnothing(f_max)
             f_max = f_loop / 2
         end
@@ -29,23 +27,16 @@ struct Simulation{C1,C2}
         sr = 2π .* im * fr
         sT = sr ./ f_loop
         noise_normalization = psd_von_karman(f_noise_crossover, vk_atm)
-        fast_plant = Plant(f_loop, frame_delay, fpf)
-        slow_plant = Plant(f_loop / R, frame_delay / R, fpf)
 
-        new{typeof(fast_controller),typeof(slow_controller)}(f_loop, fast_controller, slow_controller, fast_plant, slow_plant, fr, sr, sT, R, vk_atm, vk_ncp, f_noise_crossover, noise_normalization, f_min_cost, f_max)
+        new{typeof(fast_controller),typeof(slow_controller)}(f_loop, fast_controller, slow_controller, fr, sr, sT, R, vk_atm, vk_ncp, f_noise_crossover, noise_normalization, f_min_cost, f_max)
     end
 end
 
-function plant(sT, sim::Simulation, dm_slow_rate=true)
+function plant(sT, sim::Simulation)
     wfs_or_zoh = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)
     fast_term = transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * wfs_or_zoh^2
-    if dm_slow_rate
-        slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * computational_delay * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2
-    else
-        slow_term = transfer_function(sim.slow_controller, sT) * computational_delay * wfs_or_zoh * ((1 - exp(-sT * sim.R)) / (sT * sim.R))
-
-    end
+    slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2 # * computational_delay
     return fast_term + slow_term
 end
 

@@ -4,7 +4,6 @@ module multiwfs
     using Plots
 
     include("von_karman.jl")
-    include("plant.jl")
     include("zpkfilter.jl")
     include("controller.jl")
     include("simulation.jl")

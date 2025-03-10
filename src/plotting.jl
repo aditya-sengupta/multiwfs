@@ -2,9 +2,9 @@ using Plots
 using DSP
 using Base.Meta: parse
 
-function nyquist_plot!(sys; mark_gm_pm=true, label="Nyquist plot", kwargs...)
+function nyquist_plot!(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     success = :green
-    nyquist_contour, gm, gm_point, pm, pm_point = nyquist_and_margins(sys)
+    nyquist_contour, gm, gm_point, pm, pm_point = nyquist_and_margins(sim)
     plot!(real(nyquist_contour), imag(nyquist_contour), xlim=(-1.1,1.1), ylim=(-1.1,1.1), aspect_ratio=:equal, legend=:outertopright, label=label; kwargs...)
     phasegrid = range(-π, π, length=500)
     xunit, yunit = cos.(phasegrid), sin.(phasegrid)
@@ -22,9 +22,9 @@ function nyquist_plot!(sys; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     plot!(xunit, yunit, ls=:dash, label=nothing, color=success)
 end
 
-function nyquist_plot(sys; kwargs...)
+function nyquist_plot(sim; kwargs...)
     p = plot()
-    nyquist_plot!(sys; kwargs...)
+    nyquist_plot!(sim; kwargs...)
     p
 end
 
@@ -49,7 +49,6 @@ function plot_integrand(errsource, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normal
 end
 
 function plot_integrand!(errsource, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization; fr=exp10.(-2:0.01:log10(500.0)), f_loop=1000.0, kwargs...)
-
     err_source_fn = eval(parse(errsource))
     plot!(fr, err_source_fn.(fr, Cfast, Cslow, R, Ref(vk_atm), Ref(vk_ncp), noise_normalization, f_loop), label=errsource, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad/Hz)"; legend=:bottomleft, ylims=(1e-10, 1e2), kwargs...)
 end
