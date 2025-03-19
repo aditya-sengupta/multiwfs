@@ -42,23 +42,23 @@ function ten_etf_plots(Cfast, Cslow, R, vk_atm, vk_ncp, f_noise_crossover; fr=ex
     plot(plots_etf...)
 end
 
-function plot_integrand(errsource, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
+function plot_integrand(errsource, sim; kwargs...)
     p = plot()
-    plot_integrand!(errsource, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
+    plot_integrand!(errsource, sim; kwargs...)
     p
 end
 
-function plot_integrand!(errsource, Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization; fr=exp10.(-2:0.01:log10(500.0)), f_loop=1000.0, kwargs...)
+function plot_integrand!(errsource, sim; kwargs...)
     err_source_fn = eval(parse(errsource))
-    plot!(fr, err_source_fn.(fr, Cfast, Cslow, R, Ref(vk_atm), Ref(vk_ncp), noise_normalization, f_loop), label=errsource, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad/Hz)"; legend=:bottomleft, ylims=(1e-10, 1e2), kwargs...)
+    plot!(sim.fr, err_source_fn.(sim.fr, Ref(sim)), label=errsource, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad/Hz)"; ylims=(1e-5, 1e5), yticks=exp10.(-5:2:5), legend=:bottomleft, kwargs...)
 end
 
-function plot_integrands(Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
-    plot_integrand("atm_error_at_f_X", Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
-    plot_integrand!("ncp_error_at_f_X", Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
-    plot_integrand!("ncp_error_at_f_Y", Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
-    plot_integrand!("atm_error_at_f_X", Cfast, Cslow, R, vk_atm, vk_ncp, noise_normalization)
-    p
+function plot_integrands(sim; kwargs...)
+    plot_integrand("atm_error_at_f_X", sim; kwargs...)
+    plot_integrand!("ncp_error_at_f_X", sim; kwargs...)
+    # plot_integrand!("ncp_error_at_f_Y", sim; kwargs...)
+    plot_integrand!("noise_error_at_f_X", sim; kwargs...)
+    vline!([sim.f_min_cost], ls=:dash, color=:black, label="cost cutoff freq.")
 end
 
 function plot_psd(f, p; normalize=true, kwargs...)

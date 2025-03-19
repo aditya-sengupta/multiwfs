@@ -40,8 +40,8 @@ function plant(sT, sim::Simulation)
     return fast_term + slow_term
 end
 
-function phi_to_X(sT, sim::Simulation, dm_slow_rate=true)
-    return 1 / (1 + plant(sT, sim, dm_slow_rate))
+function phi_to_X(sT, sim::Simulation)
+    return 1 / (1 + plant(sT, sim))
 end
 
 phi_to_Y = phi_to_X
@@ -129,15 +129,23 @@ function error_at_f_Y(f, sim::Simulation)
 end
 
 function notched_error_X(sim::Simulation)
-    return sqrt(
-        quadgk(f -> error_at_f_X(f, sim), sim.f_min_cost, sim.f_max)[1]
-    )
+    if is_stable(sim)
+        return sqrt(
+            quadgk(f -> error_at_f_X(f, sim), sim.f_min_cost, sim.f_max)[1]
+        )
+    else
+        return Inf
+    end
 end
 
 function notched_error_Y(sim::Simulation)
-    return sqrt(
-        quadgk(f -> error_at_f_Y(f, sim), sim.f_min_cost, sim.f_max)[1]
-    )
+    if is_stable(sim)
+        return sqrt(
+            quadgk(f -> error_at_f_Y(f, sim), sim.f_min_cost, sim.f_max)[1]
+        )
+    else
+        return Inf
+    end
 end
 
 export Simulation, plant, phi_to_X, phi_to_Y, Nfast_to_X, Nslow_to_X, Nfast_to_Y, Nslow_to_Y, Lfast_to_X, Lslow_to_X, Lslow_to_Y, Lfast_to_Y, error_at_f_X, atm_error_at_f_X, ncp_error_at_f_X, noise_error_at_f_X, atm_error_at_f_Y, ncp_error_at_f_Y, noise_error_at_f_Y, error_at_f_Y, notched_error_X, notched_error_Y

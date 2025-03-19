@@ -4,7 +4,7 @@ using Plots
 using SciPy
 using QuadGK
 
-struct VonKarman
+mutable struct VonKarman
     f₀::Float64
     prefactor::Float64
     vkexp::Float64

@@ -1,5 +1,6 @@
 using NPZ
 using Roots
+using Optim: optimize
 
 function zero_crossings(f, x, y)
     crossing_regions = findall(x -> x < 0, y[1:end-1] .* y[2:end])
@@ -61,11 +62,12 @@ function search_gain!(sim, controller_name)
     con = nothing
     if controller_name == "fast"
         con = sim.fast_controller
+        con.gain = 1.0
     elseif controller_name == "slow"
         con = sim.slow_controller
+        con.gain = 2.0
     end
-    con.gain = 2.0
-    gain_min, gain_max = 1e-15, 1.0
+    gain_min, gain_max = 1e-15, con.gain
     while gain_max - gain_min > 1e-15
         if is_stable(sim)
             gain_min = con.gain
@@ -80,18 +82,10 @@ function search_gain!(sim, controller_name)
     con.gain
 end
 
-function zero_db_bandwidth(plant, controller)
-    try
-        # try to solve via root-finding
-        return find_zero(f -> abs(transfer_function(plant, 2π * im * f) * transfer_function(controller, 2π * im * f)) - 1.0, (0.1, 500.0))
-    catch
-        # fall back to grid evaluation
-        f = 0.1:0.1:500.0
-        abs_Hol_val = abs.(transfer_function.(Ref(plant), 2π * im * f) * transfer_function(Ref(controller), 2π * im * f))
-        fstart = argmax(abs_Hol_val)
-        fend = findlast(abs_Hol_val .<= 1.0)
-        return f[fstart:fend][findfirst(abs_Hol_val[fstart:fend] .<= 1.0)]
-    end
+function zero_db_bandwidth(sim)
+    abs_etf = f -> abs(phi_to_X(2π * im * f / sim.f_loop, sim))
+    upper_limit = optimize(f -> -abs_etf(f), 0.1, 500.0).minimizer
+    return find_zero(f -> abs_etf(f) - 1.0, (0.1, upper_limit))
 end    
 
 export search_gain!, zero_db_bandwidth, get_nyquist_contour, margins, is_stable
