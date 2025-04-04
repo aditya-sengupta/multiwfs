@@ -2,10 +2,10 @@ using Plots
 using DSP
 using Base.Meta: parse
 
-function nyquist_plot!(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
+function nyquist_plot(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     success = :green
     nyquist_contour, gm, gm_point, pm, pm_point = nyquist_and_margins(sim)
-    plot!(real(nyquist_contour), imag(nyquist_contour), xlim=(-1.1,1.1), ylim=(-1.1,1.1), aspect_ratio=:equal, legend=:outertopright, label=label; kwargs...)
+    plot(real(nyquist_contour), imag(nyquist_contour), xlim=(-1.1,1.1), ylim=(-1.1,1.1), aspect_ratio=:equal, label=label; legend=:outertopright, kwargs...)
     phasegrid = range(-π, π, length=500)
     xunit, yunit = cos.(phasegrid), sin.(phasegrid)
     if !is_stable(gm, pm)
@@ -22,24 +22,27 @@ function nyquist_plot!(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     plot!(xunit, yunit, ls=:dash, label=nothing, color=success)
 end
 
-function nyquist_plot(sim; kwargs...)
-    p = plot()
-    nyquist_plot!(sim; kwargs...)
-    p
-end
-
-function ten_etf_plots(Cfast, Cslow, R, vk_atm, vk_ncp, f_noise_crossover; fr=exp10.(-2:0.01:log10(500.0)))
+function ten_etf_plots(sim)
     plots_etf = []
     for v in ["X", "Y"]
         ne = eval(parse("notched_error_$v"))
-        p_v = plot(legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(Cfast, Cslow, R, vk_atm, vk_ncp, f_noise_crossover), digits=3)) rad")
+        p_v = plot(legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(sim), digits=3)) rad", xticks=exp10.(-3:2))
         for (fname, c, s) in zip(["phi_to_$v", "Lfast_to_$v", "Lslow_to_$v", "Nfast_to_$v", "Nslow_to_$v"], [1, 2, 2, 3, 3], [:solid, :solid, :dash, :solid, :dash])
             f = eval(parse(fname))
-            plot!(fr, abs2.(f.(sT, Cfast, Cslow, 10)), label="|$fname|²", c=c, ls=s)
+            plot!(sim.fr, abs2.(f.(sim.sT, Ref(sim))), label="|$fname|²", c=c, ls=s)
         end
         push!(plots_etf, p_v)
     end
-    plot(plots_etf...)
+    plots_etf
+end
+
+function five_psd_plots(sim)
+    ol_atm = psd_von_karman.(sim.fr, Ref(sim.vk_atm))
+    plot(sim.fr, ol_atm, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Open-loop atm"; xticks=exp10.(-3:2))
+    plot!(sim.fr, psd_von_karman.(sim.fr, Ref(sim.vk_ncp)), label="Open-loop NCP")
+    hline!([psd_von_karman(sim.f_noise_crossover, sim.vk_atm)], label="Open-loop noise")
+    plot!(sim.fr, error_at_f_X.(sim.fr, Ref(sim)), label="Closed loop at X")
+    plot!(sim.fr, error_at_f_Y.(sim.fr, Ref(sim)), label="Closed loop at Y")
 end
 
 function plot_integrand(errsource, sim; kwargs...)
@@ -50,14 +53,21 @@ end
 
 function plot_integrand!(errsource, sim; kwargs...)
     err_source_fn = eval(parse(errsource))
-    plot!(sim.fr, err_source_fn.(sim.fr, Ref(sim)), label=errsource, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad/Hz)"; ylims=(1e-5, 1e5), yticks=exp10.(-5:2:5), legend=:bottomleft, kwargs...)
+    plot!(sim.fr, err_source_fn.(sim.fr, Ref(sim)) .+ 1e-20, label=errsource, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad²/Hz)"; ylims=(1e-5, 1e3), legend=:topright, yticks=exp10.(-5:2:5), xticks=exp10.(-3:2), kwargs...)
 end
 
-function plot_integrands(sim; kwargs...)
-    plot_integrand("atm_error_at_f_X", sim; kwargs...)
-    plot_integrand!("ncp_error_at_f_X", sim; kwargs...)
-    # plot_integrand!("ncp_error_at_f_Y", sim; kwargs...)
-    plot_integrand!("noise_error_at_f_X", sim; kwargs...)
+function plot_integrands(v, sim; kwargs...)
+    if v == "XY"
+        vt = "X"
+    else
+        vt = v
+    end
+    plot_integrand("atm_error_at_f_$vt", sim; legend=:topright, kwargs...)
+    plot_integrand!("ncp_error_at_f_$vt", sim; kwargs...)
+    if v == "XY"
+        plot_integrand!("ncp_error_at_f_Y", sim; kwargs...)
+    end
+    plot_integrand!("noise_error_at_f_$vt", sim; kwargs...)
     vline!([sim.f_min_cost], ls=:dash, color=:black, label="cost cutoff freq.")
 end
 
@@ -88,4 +98,4 @@ function plot_psd_p!(f, p; kwargs...)
     plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)"; kwargs...)
 end
 
-export nyquist_plot, nyquist_plot!, ten_etf_plots, plot_integrand, plot_integrand!, plot_integrands, plot_psd_p!, plot_psd, plot_psd!
+export nyquist_plot, ten_etf_plots, plot_integrand, plot_integrand!, plot_integrands, plot_psd_p!, plot_psd, plot_psd!, five_psd_plots

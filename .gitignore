@@ -2,3 +2,4 @@ multiwfs.egg-info
 __pycache__
 data/
 .CondaPkg
+.DS_Store

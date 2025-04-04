@@ -8,10 +8,10 @@ vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 
 # fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover
 f_loop = 1000.0
-R = 10
-fast_controller = FilteredIntegrator(0.43, 0.999, ar1_filter(0.0, f_loop, "high"), 1/f_loop)
+R = 1
+fast_controller = FilteredIntegrator(0.43, 0.999, ZPKFilter(0, 0, 1), 1/f_loop)
 slow_controller = FilteredIntegrator(0.0, 0.999, ZPKFilter(0, 0, 1), R/f_loop)
-sim = Simulation(f_loop, fast_controller, slow_controller, 10, vk_atm, vk_ncp, 500.0)
+sim = Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, 500.0)
 
 # search_gain!(sim, "fast")
 
@@ -31,17 +31,11 @@ Rlqg = zeros(1,1)
 L = lqr_gain(Ã, D̃, Q, Rlqg)
 lqgic_controller = LQG(Ã, D̃, C̃, K̃, L, 1/sim.f_loop)
 sim_lqgic = Simulation(f_loop, lqgic_controller, slow_controller, R, vk_atm, vk_ncp, 500.0)
-nyquist_plot(sim_lqgic)
 
 lqgic_tf_delay = abs2.(phi_to_X.(sim.sT, Ref(sim_lqgic)))
 bw_delay = zero_db_bandwidth(sim_lqgic)
 
 begin
-    plot(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="IC, bandwidth = $(round(zero_db_bandwidth(sim), digits=2)) Hz", legend=:topleft, size=(400,400))
+    plot(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="IC, bandwidth = $(round(zero_db_bandwidth(sim), digits=2)) Hz", legend=:bottomleft, size=(400,400))
     plot!(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim_lqgic))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="LQG-IC, bandwidth = $(round(zero_db_bandwidth(sim_lqgic), digits=2)) Hz")
-    plot!(sim.fr, lqgic_tf_delay, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="LQG-IC delay, bandwidth = $(round(bw_delay, digits=2)) Hz")
 end
-
-sim.fast_controller.gain = 0.43
-
-nyquist_plot(sim)

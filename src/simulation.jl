@@ -35,7 +35,7 @@ end
 function plant(sT, sim::Simulation)
     wfs_or_zoh = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)
-    fast_term = transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * wfs_or_zoh^2
+    fast_term = wfs_or_zoh * transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * wfs_or_zoh
     slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2 # * computational_delay
     return fast_term + slow_term
 end
