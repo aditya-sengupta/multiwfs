@@ -25,4 +25,18 @@ function grid_search(sim_generator, parameter_ranges)
     optpars
 end
 
-export grid_search
+function grid_search_serial(sim_generator, parameter_ranges)
+    best_error = Inf
+    optpars = zeros(length(parameter_ranges))
+    for pars in product(parameter_ranges...)
+        this_error = notched_error_X(sim_generator(pars...))
+        if isless(this_error, best_error)
+            best_error = this_error
+            optpars = pars
+        end
+    end
+    
+    optpars
+end
+
+export grid_search, grid_search_serial

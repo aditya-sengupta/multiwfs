@@ -11,12 +11,17 @@ leak = 0.999
 
 function sim_generator_ic(gain_slow, gain_fast, f_cutoff)
     fast_controller = FilteredIntegrator(gain_fast, leak, ar1_filter(f_cutoff, f_loop, "high"), 1/f_loop)
-	slow_controller = FilteredIntegrator(gain_slow, leak, ZPKFilter(0, 0, 1), R/f_loop)
+	slow_controller = FilteredIntegrator(gain_slow, leak, no_filter, R/f_loop)
 	return Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover)
 end
 
+@time grid_search_serial(
+    sim_generator_ic,
+    [1.9:0.05:2.0, 0.53:0.001:0.54, 36.0:0.001:37.0]
+)
+
 @time grid_search(
     sim_generator_ic,
-    [0.0:0.1:2.0, 0.0:0.1:1.0, 1.0:1.0:40.0]
+    [1.9:0.05:2.0, 0.53:0.001:0.54, 36.0:0.001:37.0]
 )
 

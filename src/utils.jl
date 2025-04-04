@@ -32,4 +32,6 @@ function genpsd(tseries, f_loop, nseg=4)
 	return freq, psd
 end
 
-export block_diag, genpsd
+no_filter = ZPKFilter(0, 0, 1)
+
+export block_diag, genpsd, no_filter

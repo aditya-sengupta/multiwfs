@@ -40,5 +40,5 @@ begin
     plot!(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim_lqgic))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="LQG-IC, bandwidth = $(round(zero_db_bandwidth(sim_lqgic), digits=2)) Hz")
 end
 
-plot_integrands("X", sim)
-plot_integrands("X", sim_lqgic)
+plot_integrands("XY", sim, title="IC slow, IC fast, X error = $(round(notched_error_X(sim), digits=3)) rad")
+plot_integrands("XY", sim_lqgic, title="LQG-IC slow, IC fast, X error = $(round(notched_error_X(sim_lqgic), digits=3)) rad")

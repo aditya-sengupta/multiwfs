@@ -8,12 +8,10 @@ vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 
 # fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover
 f_loop = 1000.0
-R = 1
-fast_controller = FilteredIntegrator(0.43, 0.999, ZPKFilter(0, 0, 1), 1/f_loop)
-slow_controller = FilteredIntegrator(0.0, 0.999, ZPKFilter(0, 0, 1), R/f_loop)
+R = 10
+fast_controller = FilteredIntegrator(0.43, 0.999, no_filter, 1/f_loop)
+slow_controller = FilteredIntegrator(0.0, 0.999, no_filter, R/f_loop)
 sim = Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, 500.0)
-
-# search_gain!(sim, "fast")
 
 A_ar1 = [0.999 0; 1 0]
 L = A_DM(2)
