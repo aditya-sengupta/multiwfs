@@ -34,6 +34,6 @@ lqgic_tf_delay = abs2.(phi_to_X.(sim.sT, Ref(sim_lqgic)))
 bw_delay = zero_db_bandwidth(sim_lqgic)
 
 begin
-    plot(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="IC, bandwidth = $(round(zero_db_bandwidth(sim), digits=2)) Hz", legend=:bottomleft, size=(400,400))
+    plot(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="IC, bandwidth = $(round(zero_db_bandwidth(sim), digits=2)) Hz", legend=:bottomright, size=(400,400))
     plot!(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim_lqgic))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="LQG-IC, bandwidth = $(round(zero_db_bandwidth(sim_lqgic), digits=2)) Hz")
 end

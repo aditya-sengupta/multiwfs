@@ -1,14 +1,17 @@
+using LinearAlgebra: BLAS
+BLAS.set_num_threads(1)
 using multiwfs
 using Base: product
+using Plots
 
 r0 = 0.1031
 r0_ncp = 1.0
 vk_atm = VonKarman(0.3 * 10.0 / 3.0, 0.25 * r0^(-5/3))
 vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 f_loop = 1000.0
-f_noise_crossover = 500.0
+f_noise_crossover = 50.0
 R = 10
-leak = 0.999
+leak = 0.9999
 
 function sim_generator_lqgicboth(log_noise_slow, log_noise_fast, f_cutoff)
     A = [[0. 0. 0. 0. 0. ]
@@ -46,13 +49,26 @@ function sim_generator_lqgicboth(log_noise_slow, log_noise_fast, f_cutoff)
     return Simulation(f_loop, fast_controller_lqg, slow_controller_lqg, R, vk_atm, vk_ncp, f_noise_crossover)
 end
 
-s1 = sim_generator_lqgicboth(-8, -8, 1.0)
-s2 = sim_generator_lqgicboth(-8, -7, 1.0)
-
-@time notched_error_X(s1);
-@time notched_error_X(s2);
-
 @time grid_search(
     sim_generator_lqgicboth,
-    [-8.0:1:-1, -8.0:1:1, 5:5:40.]
+    [-8.0:1.0:8.0, -8.0:1.0:8.0, 5.0:5.0:100.0]
 )
+
+@time grid_search_coarse_to_fine(
+    sim_generator_lqgicboth,
+    [[-20.0, 5.0], [-8.0, 8.0], [0.0, 100.0]];
+    search="parallel"
+)
+
+opt_sim_icboth = sim_generator_ic(1.42, 0.23, 20.6);
+opt_sim_lqgicboth = sim_generator_lqgicboth(-7, 1, 16.0);
+
+plot(ten_etf_plots(opt_sim_icboth)..., suptitle="IC slow and fast, optimized")
+plot(ten_etf_plots(opt_sim_lqgicboth)..., suptitle="LQG-IC slow and fast, optimized")
+
+plot(
+    plot_integrands("XY", opt_sim_icboth, title="IC both, optimized, X error = $(round(notched_error_X(opt_sim_icboth), digits=3)) rad"),
+    plot_integrands("XY", opt_sim_lqgicboth, title="LQG-IC both, optimized, X error = $(round(notched_error_X(opt_sim_lqgicboth), digits=3)) rad"),
+    size=(1000,500)
+)
+

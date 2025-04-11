@@ -24,7 +24,7 @@ C = [-1+1/R -1/R 0. 1-1/R 1/R]
 D = [1. 0 0 0 0]'
 Pw = hcat(1.0...)
 W = B * Pw * B'
-V = hcat(0.05...)
+V = hcat(1e-8...)
 K = kalman_gain(A, C, W, V)
 Vv = [0 1. 0 0 -1]
 Q = Vv' * Vv
@@ -40,5 +40,8 @@ begin
     plot!(sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim_lqgic))), xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", label="LQG-IC, bandwidth = $(round(zero_db_bandwidth(sim_lqgic), digits=2)) Hz")
 end
 
-plot_integrands("XY", sim, title="IC slow, IC fast, X error = $(round(notched_error_X(sim), digits=3)) rad")
-plot_integrands("XY", sim_lqgic, title="LQG-IC slow, IC fast, X error = $(round(notched_error_X(sim_lqgic), digits=3)) rad")
+plot(
+    plot_integrands("XY", sim, title="IC slow, IC fast, X error = $(round(notched_error_X(sim), digits=3)) rad"),
+    plot_integrands("XY", sim_lqgic, title="LQG-IC slow, IC fast, X error = $(round(notched_error_X(sim_lqgic), digits=3)) rad"),
+    size=(1000,500)
+)

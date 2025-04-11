@@ -21,19 +21,19 @@ PlutoLinks.@revise using multiwfs
 r0_ncp = 0.6
 
 # ╔═╡ b4c74b15-516c-4faf-893c-5c211567d997
-gain_fast = 0.55
+gain_fast = 0.22
 
 # ╔═╡ 1a822cad-ba67-4e28-8446-b70a82d36e31
 log_lqg_noise = -8.0
 
 # ╔═╡ 4b8f47e2-829e-4c69-b403-5f7391b6c678
-f_cutoff = 33.0
+f_cutoff = 25.0
 
 # ╔═╡ de44c458-82e3-45e9-8520-b8a588e923e2
-num_nines_leak_slow = 0.25
+num_nines_leak_slow = 1
 
 # ╔═╡ 2d52af31-2c23-410e-a12c-1c469adce3b2
-num_nines_leak_fast = 3.5
+num_nines_leak_fast = 5
 
 # ╔═╡ 82c0fbe2-1c4f-4fb4-8ebc-66779de6429b
 leak_slow, leak_fast = 1 - exp10(-num_nines_leak_slow), 1 - exp10(-num_nines_leak_fast)
@@ -45,29 +45,31 @@ begin
 	vk_atm = VonKarman(0.3 * 10.0 / 3.0, 0.25 * r0^(-5/3))
 	vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 	f_loop = 1000.0
-	f_noise_crossover = 500.0
+	f_noise_crossover = 50.0
 	R = 10
 end;
 
 # ╔═╡ 604e5a31-de48-4018-935f-a4eadb1b7440
-function controllers_from_params(log_lqg_noise, gain_fast, f_cutoff, leak_slow, leak_fast)
-	A_ar1 = [leak_slow 0; 1 0]
-	L = A_DM(2)
-	Ã = block_diag(L, A_ar1)
-	C̃ = [0 -1 0 1]
-	D̃ = [1 0 0 0]' 
-	B = [0; 0; 1; 0]
-	Pw = hcat(1...)
-	W = B * Pw * B'
-	V = hcat(exp10(log_lqg_noise)...)
-	K̃ = kalman_gain(Ã, C̃, W, V)
-	Vv = [0 -1 0 1]
-	Q = Vv' * Vv
-	Rlqg = zeros(1,1)
-	L = lqr_gain(Ã, D̃, Q, Rlqg)
-	slow_controller = FilteredLQG(LQG(Ã, D̃, C̃, K̃, L, R/f_loop), ZPKFilter(0, 0, 1))
+function controllers_from_params(log_noise_slow, gain_fast, f_cutoff, leak_slow, leak_fast)
+	A = [[0. 0. 0. 0. 0. ]
+    [1. 0. 0. 0. 0. ]
+    [0. 0. leak_slow 0. 0. ]
+    [0. 0. leak_slow 0. 0. ]
+    [0. 0. 0. 1. 0. ]]
+    B = [0.; 0; 1; 1; 0]
+    C = [-1+1/R -1/R 0. 1-1/R 1/R]
+    D = [1. 0 0 0 0]'
+    Pw = hcat(1.0...)
+    W = B * Pw * B'
+    V = hcat(exp10(log_noise_slow)...)
+    K = kalman_gain(A, C, W, V)
+    Vv = [0 1. 0 0 -1]
+    Q = Vv' * Vv
+    Rlqg = zeros(1,1)
+    L = lqr_gain(A, D, Q, Rlqg)
+    slow_controller_lqg = FilteredLQG(LQG(A, D, C, K, L, R/f_loop), no_filter)
 	fast_controller = FilteredIntegrator(gain_fast, leak_fast, ar1_filter(f_cutoff, f_loop, "high"), 1/f_loop)
-	return fast_controller, slow_controller
+	return fast_controller, slow_controller_lqg
 end;
 
 # ╔═╡ 44e9e808-2bd2-4eaa-84f3-3c23f4ddb9be
@@ -91,8 +93,8 @@ begin
 		push!(Xerrs_hdr, notched_error_X(sim_hdr))
 		push!(Xerrs_hdr_nofilter, notched_error_X(sim_hdr_nofilter))
 	end
-	hairdryer = plot(r0_ncp_vals, Xerrs_hdr, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 1.0), label="This controller", legend=:bottomright)
-	plot!(r0_ncp_vals, Xerrs_hdr_nofilter, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 1.0), label="(1.4, 0.4) integrator")
+	hairdryer = plot(r0_ncp_vals, Xerrs_hdr, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 2.0), label="This controller", legend=:topright)
+	plot!(r0_ncp_vals, Xerrs_hdr_nofilter, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 2.0), label="(1.4, 0.4) integrator")
 	vline!([r0_ncp], color=:black, ls=:dash, label="Reference r₀")
 end
 
@@ -141,7 +143,7 @@ begin
 	push!(allplots, psdplot)
 	append!(allplots, min_plots)
 	pf = plot(allplots..., size=(1100,1100), left_margin=5mm, right_margin=10mm, suptitle="Leak-optimized slow-LQG-IC HPF; gain_fast=$gain_fast, fast LQG noise=$(round(exp10.(log_lqg_noise), digits=3)), f_cutoff=$f_cutoff \n leak_slow=$(round(leak_slow, digits=3)), leak_fast=$(round(leak_fast, digits=3)), r0 NCP = $(r0_ncp)m", dpi=300, layout=(4, 3))
-	Plots.savefig(joinpath(multiwfs.PROJECT_ROOT, "figures", "evaluation", "evaluation_lqgicslow_hpf_leakopt_r0ncp$(r0_ncp).png"))
+	Plots.savefig(joinpath(multiwfs.PROJECT_ROOT, "figures", "evaluation", "evaluation_lqgicslow_hpf_leakopt_r0ncp$(r0_ncp).pdf"))
 	pf
 end
 
@@ -156,7 +158,7 @@ end
 # ╠═de44c458-82e3-45e9-8520-b8a588e923e2
 # ╠═2d52af31-2c23-410e-a12c-1c469adce3b2
 # ╟─82c0fbe2-1c4f-4fb4-8ebc-66779de6429b
-# ╟─609cfed9-0d6c-4a4f-b00e-339adab6459e
+# ╠═609cfed9-0d6c-4a4f-b00e-339adab6459e
 # ╠═604e5a31-de48-4018-935f-a4eadb1b7440
 # ╠═44e9e808-2bd2-4eaa-84f3-3c23f4ddb9be
 # ╠═1b5e2703-50b7-43e6-a519-5c730c0d0aa6

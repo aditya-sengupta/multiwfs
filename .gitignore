@@ -3,3 +3,4 @@ __pycache__
 data/
 .CondaPkg
 .DS_Store
+*.pdf

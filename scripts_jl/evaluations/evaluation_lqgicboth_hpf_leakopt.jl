@@ -21,13 +21,13 @@ PlutoLinks.@revise using multiwfs
 r0_ncp = 0.6
 
 # ╔═╡ b4c74b15-516c-4faf-893c-5c211567d997
-gain_slow = 2.0
+log_lqg_noise_slow = -8
 
 # ╔═╡ 1a822cad-ba67-4e28-8446-b70a82d36e31
-log_lqg_noise = -2.4
+log_lqg_noise_fast = 1.1
 
 # ╔═╡ 4b8f47e2-829e-4c69-b403-5f7391b6c678
-f_cutoff = 34.0
+f_cutoff = 23.0
 
 # ╔═╡ de44c458-82e3-45e9-8520-b8a588e923e2
 num_nines_leak_slow = 1
@@ -45,34 +45,50 @@ begin
 	vk_atm = VonKarman(0.3 * 10.0 / 3.0, 0.25 * r0^(-5/3))
 	vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 	f_loop = 1000.0
-	f_noise_crossover = 500.0
+	f_noise_crossover = 50.0
 	R = 10
 end;
 
 # ╔═╡ 604e5a31-de48-4018-935f-a4eadb1b7440
-function controllers_from_params(gain_slow, log_lqg_noise, f_cutoff, leak_slow, leak_fast)
-	A_ar1 = [leak_fast 0; 1 0]
-	L = A_DM(2)
-	Ã = block_diag(L, A_ar1)
-	C̃ = [0 -1 0 1]
-	D̃ = [1 0 0 0]' 
-	B = [0; 0; 1; 0]
-	Pw = hcat(1...)
-	W = B * Pw * B'
-	V = hcat(exp10(log_lqg_noise)...)
-	K̃ = kalman_gain(Ã, C̃, W, V)
-	Vv = [0 -1 0 1]
-	Q = Vv' * Vv
-	Rlqg = zeros(1,1)
-	L = lqr_gain(Ã, D̃, Q, Rlqg)
-	fast_controller = FilteredLQG(LQG(Ã, D̃, C̃, K̃, L, 1/f_loop), ar1_filter(f_cutoff, f_loop, "high"))
-	slow_controller = FilteredIntegrator(gain_slow, leak_slow, ZPKFilter(0, 0, 1), R/f_loop)
-	return fast_controller, slow_controller
+function controllers_from_params(log_lqg_noise_slow, log_lqg_noise_fast, f_cutoff, leak_slow, leak_fast)
+	A = [[0. 0. 0. 0. 0. ]
+    [1. 0. 0. 0. 0. ]
+    [0. 0. leak_slow 0. 0. ]
+    [0. 0. leak_slow 0. 0. ]
+    [0. 0. 0. 1. 0. ]]
+    B = [0.; 0; 1; 1; 0]
+    C = [-1+1/R -1/R 0. 1-1/R 1/R]
+    D = [1. 0 0 0 0]'
+    Pw = hcat(1.0...)
+    W = B * Pw * B'
+    V = hcat(exp10(log_lqg_noise_slow)...)
+    K = kalman_gain(A, C, W, V)
+    Vv = [0 1. 0 0 -1]
+    Q = Vv' * Vv
+    Rlqg = zeros(1,1)
+    L = lqr_gain(A, D, Q, Rlqg)
+    slow_controller_lqg = FilteredLQG(LQG(A, D, C, K, L, R/f_loop), no_filter)
+    A_ar1 = [leak_fast 0; 1 0]
+    L = A_DM(2)
+    Ã = block_diag(L, A_ar1)
+    C̃ = [0 -1 0 1]
+    D̃ = [1 0 0 0]' 
+    B = [0; 0; 1; 0]
+    Pw = hcat(1...)
+    W = B * Pw * B'
+    V = hcat(exp10(log_lqg_noise_fast)...)
+    K̃ = kalman_gain(Ã, C̃, W, V)
+    Vv = [0 -1 0 1]
+    Q = Vv' * Vv
+    Rlqg = zeros(1,1)
+    L = lqr_gain(Ã, D̃, Q, Rlqg)
+	fast_controller_lqg = FilteredLQG(LQG(Ã, D̃, C̃, K̃, L, 1/f_loop), ar1_filter(f_cutoff, f_loop, "high"))
+	return fast_controller_lqg, slow_controller_lqg
 end;
 
 # ╔═╡ 44e9e808-2bd2-4eaa-84f3-3c23f4ddb9be
 begin
-	fast_controller, slow_controller = controllers_from_params(gain_slow, log_lqg_noise, f_cutoff, leak_slow, leak_fast)
+	fast_controller, slow_controller = controllers_from_params(log_lqg_noise_slow, log_lqg_noise_fast, f_cutoff, leak_slow, leak_fast)
 	sim = Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover)
 end;
 
@@ -91,8 +107,8 @@ begin
 		push!(Xerrs_hdr, notched_error_X(sim_hdr))
 		push!(Xerrs_hdr_nofilter, notched_error_X(sim_hdr_nofilter))
 	end
-	hairdryer = plot(r0_ncp_vals, Xerrs_hdr, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 1.0), label="This controller")
-	plot!(r0_ncp_vals, Xerrs_hdr_nofilter, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 1.0), label="(1.4, 0.4) integrator")
+	hairdryer = plot(r0_ncp_vals, Xerrs_hdr, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", label="This controller", ylims=(0.5, 2.0))
+	plot!(r0_ncp_vals, Xerrs_hdr_nofilter, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", label="(1.4, 0.4) integrator")
 	vline!([r0_ncp], color=:black, ls=:dash, label="Reference r₀")
 end
 
@@ -105,9 +121,9 @@ end;
 
 # ╔═╡ 2d3b6440-3c01-483f-b9c4-b2f8a867817e
 begin
-	parameter_names = ["gain_slow", "log_lqg_noise", "f_cutoff", "leak_slow", "leak_fast"]
-	parameter_centers = [gain_slow, log_lqg_noise, f_cutoff, leak_slow, leak_fast]
-	parameter_grids = [(gain_slow-0.1):0.01:(gain_slow+0.1), (log_lqg_noise-1):0.1:(log_lqg_noise+1), (f_cutoff-10):1:(f_cutoff+10), nines_range(leak_slow), nines_range(leak_fast)]
+	parameter_names = ["log_lqg_noise_slow", "log_lqg_noise_fast", "f_cutoff", "leak_slow", "leak_fast"]
+	parameter_centers = [log_lqg_noise_slow, log_lqg_noise_fast, f_cutoff, leak_slow, leak_fast]
+	parameter_grids = [(log_lqg_noise_slow-0.1):0.01:(log_lqg_noise_slow+0.1), (log_lqg_noise_fast-1):0.1:(log_lqg_noise_fast+1), (f_cutoff-10):1:(f_cutoff+10), nines_range(leak_slow), nines_range(leak_fast)]
 	# resolved parameter minimum grid
 	min_plots = []
 	for (i, (parname, pargrid)) in enumerate(zip(parameter_names, parameter_grids))
@@ -140,8 +156,8 @@ begin
 	append!(allplots, etfplots)
 	push!(allplots, psdplot)
 	append!(allplots, min_plots)
-	pf = plot(allplots..., size=(1100,1100), left_margin=5mm, suptitle="Leak-optimized fast-LQG-IC HPF; gain_slow=$gain_slow, fast LQG noise=$(round(exp10.(log_lqg_noise), digits=3)), f_cutoff=$f_cutoff \n leak_slow=$leak_slow, leak_fast=$leak_fast, r0 NCP = $(r0_ncp)m", dpi=300, layout=(4, 3))
-	Plots.savefig(joinpath(multiwfs.PROJECT_ROOT, "figures", "evaluation", "evaluation_lqgicfast_hpf_leakopt_r0ncp$(r0_ncp).png"))
+	pf = plot(allplots..., size=(1100,1100), left_margin=5mm, suptitle="Leak-optimized fast-LQG-IC HPF; slow LQG noise=$(round(exp10.(log_lqg_noise_slow), digits=3)), fast LQG noise=$(round(exp10.(log_lqg_noise_fast), digits=3)), f_cutoff=$f_cutoff \n leak_slow=$leak_slow, leak_fast=$leak_fast, r0 NCP = $(r0_ncp)m", dpi=300, layout=(4, 3))
+	Plots.savefig(joinpath(multiwfs.PROJECT_ROOT, "figures", "evaluation", "evaluation_lqgicboth_hpf_leakopt_r0ncp$(r0_ncp).pdf"))
 	pf
 end
 
@@ -156,7 +172,7 @@ end
 # ╠═de44c458-82e3-45e9-8520-b8a588e923e2
 # ╠═2d52af31-2c23-410e-a12c-1c469adce3b2
 # ╟─82c0fbe2-1c4f-4fb4-8ebc-66779de6429b
-# ╟─609cfed9-0d6c-4a4f-b00e-339adab6459e
+# ╠═609cfed9-0d6c-4a4f-b00e-339adab6459e
 # ╠═604e5a31-de48-4018-935f-a4eadb1b7440
 # ╠═44e9e808-2bd2-4eaa-84f3-3c23f4ddb9be
 # ╠═1b5e2703-50b7-43e6-a519-5c730c0d0aa6

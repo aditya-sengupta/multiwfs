@@ -33,9 +33,10 @@ struct Simulation{C1,C2}
 end
 
 function plant(sT, sim::Simulation)
-    wfs_or_zoh = (1 - exp(-sT)) / sT
+    wfs_delay = (1 - exp(-sT)) / sT
+    zero_order_hold = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)
-    fast_term = wfs_or_zoh * transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * wfs_or_zoh
+    fast_term = wfs_delay * transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * zero_order_hold
     slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2 # * computational_delay
     return fast_term + slow_term
 end
@@ -130,9 +131,7 @@ end
 
 function notched_error_X(sim::Simulation)
     if is_stable(sim)
-        return sqrt(
-            quadgk(f -> error_at_f_X(f, sim), sim.f_min_cost, sim.f_max)[1]
-        )
+        return sqrt(quadgk(f -> error_at_f_X(f, sim), sim.f_min_cost, sim.f_max)[1])
     else
         return Inf
     end

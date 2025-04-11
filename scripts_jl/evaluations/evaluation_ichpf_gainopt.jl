@@ -21,13 +21,13 @@ PlutoLinks.@revise using multiwfs
 r0_ncp = 0.6
 
 # ╔═╡ b4c74b15-516c-4faf-893c-5c211567d997
-gain_slow = 2.0
+gain_slow = 2.03
 
 # ╔═╡ 1a822cad-ba67-4e28-8446-b70a82d36e31
 gain_fast = 0.57
 
 # ╔═╡ 4b8f47e2-829e-4c69-b403-5f7391b6c678
-f_cutoff = 44.0
+f_cutoff = 43.0
 
 # ╔═╡ 609cfed9-0d6c-4a4f-b00e-339adab6459e
 begin
@@ -36,7 +36,7 @@ begin
 	vk_atm = VonKarman(0.3 * 10.0 / 3.0, 0.25 * r0^(-5/3))
 	vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
 	f_loop = 1000.0
-	f_noise_crossover = 500.0
+	f_noise_crossover = 50.0
 	R = 10
 end;
 
@@ -69,8 +69,8 @@ begin
 		push!(Xerrs_hdr, notched_error_X(sim_hdr))
 		push!(Xerrs_hdr_nofilter, notched_error_X(sim_hdr_nofilter))
 	end
-	hairdryer = plot(r0_ncp_vals, Xerrs_hdr, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 1.0), label="This controller")
-	plot!(r0_ncp_vals, Xerrs_hdr_nofilter, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", ylims=(0.5, 1.0), label="(1.4, 0.4) integrator")
+	hairdryer = plot(r0_ncp_vals, Xerrs_hdr, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", label="This controller", ylims=(0.5, 2.0))
+	plot!(r0_ncp_vals, Xerrs_hdr_nofilter, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), xlabel="NCP r₀ (m)", ylabel="X error (rad)", label="(1.4, 0.4) integrator")
 	vline!([r0_ncp], color=:black, ls=:dash, label="Reference r₀")
 end;
 
@@ -112,7 +112,7 @@ begin
 	push!(allplots, psdplot)
 	append!(allplots, min_plots)
 	pf = plot(allplots..., size=(1100,800), left_margin=5mm, suptitle="Gain-optimized IC-HPF; gain_slow=$gain_slow, gain_fast=$gain_fast, f_cutoff=$f_cutoff, r0 NCP = $(r0_ncp)m", dpi=300)
-	Plots.savefig(joinpath(multiwfs.PROJECT_ROOT, "figures", "evaluation", "evaluation_ichpf_gainopt_r0ncp$(r0_ncp).png"))
+	Plots.savefig(joinpath(multiwfs.PROJECT_ROOT, "figures", "evaluation", "evaluation_ichpf_gainopt_r0ncp$(r0_ncp).pdf"))
 	pf
 end
 
