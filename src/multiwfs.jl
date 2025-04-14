@@ -13,4 +13,5 @@ module multiwfs
     include("optimization.jl")
     include("plotting.jl")
     include("utils.jl")
+    include("simgen.jl")
 end 

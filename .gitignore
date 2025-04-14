@@ -4,3 +4,4 @@ data/
 .CondaPkg
 .DS_Store
 *.pdf
+*.jld2
