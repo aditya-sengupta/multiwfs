@@ -22,14 +22,14 @@ function nyquist_plot(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     plot!(xunit, yunit, ls=:dash, label=nothing, color=success)
 end
 
-function ten_etf_plots(sim)
+function ten_etf_plots(sim; kwargs...)
     plots_etf = []
     for v in ["X", "Y"]
         ne = eval(parse("notched_error_$v"))
-        p_v = plot(legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(sim), digits=3)) rad", xticks=exp10.(-3:2))
+        p_v = plot(;legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(sim), digits=3)) rad", xticks=exp10.(-3:2), kwargs...)
         for (fname, c, s) in zip(["phi_to_$v", "Lfast_to_$v", "Lslow_to_$v", "Nfast_to_$v", "Nslow_to_$v"], [1, 2, 2, 3, 3], [:solid, :solid, :dash, :solid, :dash])
             f = eval(parse(fname))
-            plot!(sim.fr, abs2.(f.(sim.sT, Ref(sim))), label="|$fname|²", c=c, ls=s)
+            plot!(sim.fr, abs2.(f.(sim.sT, Ref(sim))), label="|$fname|²", c=c, ls=s; kwargs...)
         end
         push!(plots_etf, p_v)
     end

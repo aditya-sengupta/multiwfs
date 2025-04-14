@@ -3,24 +3,27 @@ using multiwfs
 using Plots
 
 gridres = load("all_opt.jld2")
+# gridres_lqgicslow = load("lqgicslow_opt.jld2")
 r0_ncp_vals = [0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 4.0, 5.0, 6.0]
 f_crossover_vals = [50.0, 100.0, 200.0, 500.0]
 
 begin
-    f_crossover = 200.0
-    x_errs = [[], [], [], []]
-    for r0_ncp in r0_ncp_vals
-        vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
-        gf_oneint = gridres["($r0_ncp, $f_crossover)"][1][1]
-        push!(x_errs[1], notched_error_X(simgen_ichpf(gridres["($r0_ncp, $f_crossover)"][1][1], 0.0, 0.0, vk_ncp, f_crossover)))
-        push!(x_errs[2], notched_error_X(simgen_ichpf(gridres["($r0_ncp, $f_crossover)"][2]..., 0.0, vk_ncp, f_crossover)))
-        push!(x_errs[3], notched_error_X(simgen_ichpf(gridres["($r0_ncp, $f_crossover)"][3]..., vk_ncp, f_crossover)))
-        push!(x_errs[4], notched_error_X(simgen_lqgicfasthpf(gridres["($r0_ncp, $f_crossover)"][4]..., vk_ncp, f_crossover)))
+    hairdryers = []
+    for f_crossover in f_crossover_vals
+        x_errs = [[], [], [], []]
+        for r0_ncp in r0_ncp_vals
+            vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
+            gf_oneint = gridres["($r0_ncp, $f_crossover)"][1][1]
+            push!(x_errs[1], notched_error_X(simgen_ichpf(gridres["($r0_ncp, $f_crossover)"][1][1], 0.0, 0.0, vk_ncp, f_crossover)))
+            push!(x_errs[2], notched_error_X(simgen_ichpf(gridres["($r0_ncp, $f_crossover)"][2]..., 0.0, vk_ncp, f_crossover)))
+            push!(x_errs[3], notched_error_X(simgen_ichpf(gridres["($r0_ncp, $f_crossover)"][3]..., vk_ncp, f_crossover)))
+            push!(x_errs[4], notched_error_X(simgen_lqgicfasthpf(gridres["($r0_ncp, $f_crossover)"][4]..., vk_ncp, f_crossover)))
+        end
+        push!(hairdryers, plot(r0_ncp_vals, x_errs, xscale=:log10, xticks=([0.6, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0], [0.6, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0]), label=["fast IC" "slow IC + fast IC" "slow IC + fast IC-HPF" "slow IC + fast LQG-IC-HPF"], xlabel="r₀ NCP (m)", ylabel="X error (rad)", title="Noise crossover frequency = $(Int(f_crossover)) Hz", ylims=(0.5, 1.5), xtickfontsize=5, ytickfontsize=5, legendfontsize=5, titlefontsize=8, xlabelfontsize=8, ylabelfontsize=8, dpi=300))
     end
-    plot(r0_ncp_vals, x_errs, xscale=:log10, xticks=(r0_ncp_vals, r0_ncp_vals), label=["fast IC" "slow IC + fast IC" "slow IC + fast IC-HPF" "slow IC + fast LQG-IC-HPF"], xlabel="r₀ NCP (m)", ylabel="X error (rad)", title="Hairdryer plot, crossover frequency = $f_crossover Hz")
+    plot(hairdryers...)
+    Plots.savefig("figures/hairdryer/hairdryer_ichpf.png")
 end
-
-
 
 [grid_search_coarse_to_fine(gf -> simgen_ichpf(gf, 0.0, 0.0, vk_ncp, f_crossover), [[0.0, 1.0]])[1],
 grid_search_coarse_to_fine((gf, gs) -> simgen_ichpf(gf, gs, 0.0, vk_ncp, f_crossover), [[0.0, 1.0], [0.0, 2.0]])[1],
