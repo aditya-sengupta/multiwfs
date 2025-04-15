@@ -54,6 +54,11 @@ end
     [-8.0:1.0:8.0, -8.0:1.0:8.0, 5.0:5.0:100.0]
 )
 
+@time grid_search(
+    sim_generator_ic,
+    [0.0:0.125:1.0, 0.0:0.0625:1.0, 5.0:5.0:100.0]
+)
+
 @time grid_search_coarse_to_fine(
     sim_generator_lqgicboth,
     [[-20.0, 5.0], [-8.0, 8.0], [0.0, 100.0]];

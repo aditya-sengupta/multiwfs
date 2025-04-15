@@ -48,7 +48,7 @@ function grid_search_serial(sim_generator, parameter_ranges)
     optpars
 end
 
-function grid_search_coarse_to_fine(sim_generator, parameter_limits; npoints_per_parameter=11, search="serial")
+function grid_search_coarse_to_fine(sim_generator, parameter_limits; npoints_per_parameter=11, search="serial", niter=3)
     parameters_this_iteration = nothing
     parameter_ranges = nothing
     gs = nothing
@@ -57,7 +57,7 @@ function grid_search_coarse_to_fine(sim_generator, parameter_limits; npoints_per
     else
         gs = grid_search
     end
-    for _ in 1:3
+    for _ in 1:niter
         parameter_steps = [(x[2] - x[1]) / (npoints_per_parameter - 1) for x in parameter_limits]
         parameter_ranges = [x[1]:st:x[2] for (x, st) in zip(parameter_limits, parameter_steps)]
         parameters_this_iteration = gs(sim_generator, parameter_ranges)

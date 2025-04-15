@@ -15,8 +15,8 @@ function sim_generator_ic(gain_slow, gain_fast, f_cutoff)
 	return Simulation(f_loop, fast_controller, slow_controller, R, vk_atm, vk_ncp, f_noise_crossover)
 end
 
-grid_search_coarse_to_fine(
+@time grid_search_coarse_to_fine(
     sim_generator_ic,
     [[0.0, 2.0], [0.0, 1.0], [0.0, 100.0]];
     search="parallel"
-)
+);
