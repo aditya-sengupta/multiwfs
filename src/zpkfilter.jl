@@ -33,7 +33,7 @@ function output!(zpkf::ZPKFilter{Nz,Np,Nm}, x_n) where {Nz,Np,Nm}
     
     for i in 1:Nm
         k = (i == Nm ? zpkf.k : 1)
-        if i < min(Nz, Np)
+        if i <= min(Nz, Np)
             y_n = zpkf.p[i] * zpkf.prev_y[i] + k * x_n - k * zpkf.z[i] * zpkf.prev_x[i]
         elseif i < Nz
             # zero, no pole

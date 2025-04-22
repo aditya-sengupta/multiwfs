@@ -4,11 +4,10 @@ authors = ["aditya-sengupta <adityars@ucsc.edu>"]
 version = "0.1.0"
 
 [deps]
-CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ControlSystems = "a6e380b2-a6ca-5380-bf3e-84a91bcd477e"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
-DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 FLoops = "cc61a311-1640-44b5-9fba-1b764f453329"
@@ -30,11 +29,12 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-DataStructures = "0.18.22"
+CairoMakie = "0.13.4"
 Distributions = "0.25.113"
 FLoops = "0.2.2"
 ForwardDiff = "0.10.38"
 JLD2 = "0.5.12"
 Optim = "1.11.0"
-Pluto = "0.20.4"
+Plots = "1.40.13"
+Pluto = "0.20.6"
 PlutoLinks = "0.1.6"

@@ -48,12 +48,32 @@ function grid_search_serial(sim_generator, parameter_ranges)
     optpars
 end
 
+function grid_search_y(sim_generator, parameter_ranges)
+    @floop ThreadedEx() for pars in product(parameter_ranges...)
+        this_error = Inf
+        try
+            this_error = notched_error_Y(sim_generator(pars...))
+        catch e
+        end
+        @reduce() do (best_error; this_error), (optpars; pars)
+            if isless(this_error, best_error)
+                best_error = this_error
+                optpars = pars
+            end
+        end
+    end
+    
+    optpars
+end
+
 function grid_search_coarse_to_fine(sim_generator, parameter_limits; npoints_per_parameter=11, search="serial", niter=3)
     parameters_this_iteration = nothing
     parameter_ranges = nothing
     gs = nothing
     if search == "serial"
         gs = grid_search_serial
+    elseif search == "y"
+        gs = grid_search_y
     else
         gs = grid_search
     end

@@ -7,7 +7,7 @@ function psd(x, f_loop)
     return welch_pgram(x, n, noverlap; fs=f_loop)
 end
 
-function integrator_control(sys, open_loop, gain, leak, update_every; hpf_gain=0.0, delay_frames=1)
+function integrator_control(sim)
     N = length(open_loop)
     closed_loop = zeros(N)
     closed_loop[1] = open_loop[1]
@@ -15,7 +15,7 @@ function integrator_control(sys, open_loop, gain, leak, update_every; hpf_gain=0
     average_buffer = []
     for i in 2:N
         push!(average_buffer, closed_loop[i-1])
-        y_n = output!(sys.control_filter, closed_loop[i-delay_frames])[1]
+        y_n = output!(sim.fast_controller.cfilter, closed_loop[i-delay_frames])[1]
         if i % update_every == 0
             command = leak * command - gain * mean(average_buffer)
             average_buffer = []

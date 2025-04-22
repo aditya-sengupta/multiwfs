@@ -14,4 +14,5 @@ module multiwfs
     include("plotting.jl")
     include("utils.jl")
     include("simgen.jl")
+    include("timedomain.jl")
 end 

@@ -1,6 +1,7 @@
 using Plots
 using DSP
 using Base.Meta: parse
+using CairoMakie
 
 function nyquist_plot(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     success = :green
@@ -98,4 +99,23 @@ function plot_psd_p!(f, p; kwargs...)
     plot!(f, p, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)"; kwargs...)
 end
 
-export nyquist_plot, ten_etf_plots, plot_integrand, plot_integrand!, plot_integrands, plot_psd_p!, plot_psd, plot_psd!, five_psd_plots
+function plot_timedomain_vs_analytic(sim, etffn, ol_timeseries, cl_timeseries)
+    N = length(ol_timeseries)
+	local fig = Figure(size=(1000,500))
+	local axs = [
+		Axis(fig[1,1], xlabel="Timesteps", ylabel="Time series (rad)"), Axis(fig[1,2], xscale=log10, yscale=log10, xlabel="Frequency (Hz)", ylabel="Power spectrum (rad²/Hz)"), 
+		Axis(fig[1,3], xscale=log10, yscale=log10, xlabel="Frequency (Hz)", ylabel="$etffn |ETF|²")
+	]
+	lines!(axs[1], 1:N, ol_timeseries, label="Open loop")
+	lines!(axs[1], 1:N, cl_timeseries, label="Closed loop at X")
+	local freqs, psd_ol = genpsd(ol_timeseries, sim.f_loop)
+	_, psd_cl = genpsd(cl_timeseries, sim.f_loop)
+	lines!(axs[2], freqs, psd_ol, label="Open loop")
+	lines!(axs[2], freqs, psd_cl, label="Closed loop at X")
+	lines!(axs[3], freqs, psd_cl ./ psd_ol, label="Time-domain ETF", color=:teal)
+	lines!(axs[3], sim.fr, abs2.(etffn.(sim.sT, Ref(sim))), label="Analytic ETF", color=:violetred)
+	for ax in axs axislegend(ax, position=:rb) end
+	fig
+end
+
+export nyquist_plot, ten_etf_plots, plot_integrand, plot_integrand!, plot_integrands, plot_psd_p!, plot_psd, plot_psd!, five_psd_plots, plot_timedomain_vs_analytic
