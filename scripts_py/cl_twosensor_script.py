@@ -1,8 +1,8 @@
 # %%
 import numpy as np
 from matplotlib import pyplot as plt
-from cl_twosensor_nolqg import run_cl_2sensor
-from ben_lqgic.functions import genpsd
+from cl_twosensor_withlqg import run_cl_2sensor
+from lisa_psd import genAvgPerUnb
 
 # %%
 atm = np.load("../data/olt/olt_atm.npy")
@@ -26,19 +26,19 @@ slowphase_ts= \
     run_cl_2sensor(atm*0, 10, delayfr=1, \
                     slow_gain=1.4, fast_gain=0.4, integ=0.995,
                     ar1hp_coeff=0.91,
-                    ncptimeseries=ncp_fast,
+                    ncptimeseries=ncp_fast*0,
                     slowncptimeseries=ncp_slow*0,
                     mnoisetimeseries=noise_fast*0,
-                    slowmnoisetimeseries=noise_slow*0
+                    slowmnoisetimeseries=noise_slow
                     )
     
-# %%
-freq, psd_atm = genpsd(atm, 1e-3)
-freq, psd_ncp_fast = genpsd(ncp_fast, 1e-3)
-freq, psd_ncp_slow = genpsd(ncp_slow, 1e-3)
-_, psd_cl = genpsd(slowphase_ts, 1e-3)
+
+psd_noise_slow = genAvgPerUnb(noise_slow, 2048)[1:1025]
+psd_cl = genAvgPerUnb(slowphase_ts, 2048)[1:1025]
+freq = np.linspace(0.0, 500.0, 1025)[1:]
+
 #plt.loglog(freq, psd_cl / psd_atm)
-plt.loglog(freq, psd_cl / psd_ncp_fast)
+plt.loglog(freq, psd_cl / psd_noise_slow)
 # plt.loglog(freq, psd_cl / psd_ncp_slow)
 plt.xlabel("Frequency (Hz)")
 plt.ylabel(r"|ETF|${}^2$");

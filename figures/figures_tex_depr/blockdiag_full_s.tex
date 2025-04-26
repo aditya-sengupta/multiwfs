@@ -1,0 +1,76 @@
+\begin{tikzpicture}[auto,>=latex', align=center, node distance=2cm]
+    % Blocks for the plant.
+    \node [name=disturbance, red!80!blue] {$\phi$};
+    \node [sum, name=sum, right of=disturbance] {+};
+    \node [name=error, blue!80!red, above right of=sum] {$\varepsilon$};
+    \node [input,name=wfssplit, right of=disturbance, node distance=3cm] {};
+    \node [sum, name=fastncpsum, right of=wfssplit, node distance=1cm, yshift=1.4cm] {$+$};
+    \node [sum, name=slowncpsum, right of=wfssplit, node distance=1cm, yshift=-1.4cm] {$+$};
+    \node [name=fastncp, above of=fastncpsum, red!80!blue, node distance=1cm] {$L_\text{fast}$};
+    \node [name=slowncp, above of=slowncpsum, red!80!blue, node distance=1cm] {$L_\text{slow}$};
+    \node [block,draw, name=fastwfsdelay, right of=fastncpsum] {$\frac{1 - e^{-sT}}{sT}$}; 
+    \node [block,draw, name=slowwfsdelay, right of=slowncpsum] {$\frac{1 - e^{-sRT}}{sRT}$};
+    \node [sum, name=fastnoisesum, right of=fastwfsdelay, node distance=2cm] {$+$};
+    \node [sum, name=slownoisesum, right of=slowwfsdelay, node distance=2cm] {$+$};
+    \node [red!80!blue] (fastnoise) at (fastnoisesum |- fastncp.base) {$N_\text{fast}$};
+    \node [red!80!blue] (slownoise) at (slownoisesum |- slowncp.base) {$N_\text{slow}$};
+    \node [name=sfast, right of=fastnoisesum, blue!80!red] {$s_\text{fast}$};
+    \node [name=sslow, right of=slownoisesum, blue!80!red] {$s_\text{slow}$};
+
+    % Blocks for the controller and feedback arm.
+    \node [block, draw, below of=slownoisesum, name=slowcontroller, xshift=0.75cm, node distance=3cm] {$C_\text{slow}$};
+    \node [block, draw, below of=slowcontroller, name=fastcontroller] {$C_\text{fast}$};
+    \node [block, draw, left of=slowcontroller, name=slowcompute, node distance=2.75cm] {$e^{-sT_{c,\text{slow}}}$};
+    \node [block, draw, left of=fastcontroller, name=fastcompute, node distance=2.75cm] {$e^{-sT_{c,\text{fast}}}$};
+    \node [sum, left of=slowcompute, name=controlsum, node distance=3cm, yshift=-1cm] {$+$};
+    \node [block, below of=sum, name=zoh] {$\frac{1 - e^{-sT}}{sT}$};
+
+    % All the direct arrows.
+    \draw[->] (disturbance) -- (sum);
+    \draw[->] (fastncpsum) -- (fastwfsdelay);
+    \draw[->] (fastncp) -- (fastncpsum);
+    \draw[->] (fastwfsdelay) -- (fastnoisesum);
+    \draw[->] (fastnoisesum) -- (sfast);
+    \draw[->] (fastnoise) -- (fastnoisesum);
+    \draw[->] (slowncpsum) -- (slowwfsdelay);
+    \draw[->] (slowncp) -- (slowncpsum);
+    \draw[->] (slowwfsdelay) -- (slownoisesum);
+    \draw[->] (slownoisesum) -- (sslow);
+    \draw[->] (slownoise) -- (slownoisesum);
+    \draw[->] (fastcontroller) -- (fastcompute);
+    \draw[->] (slowcontroller) -- (slowcompute);
+    \draw[->] (zoh) -- (sum);
+
+    % Anchor nodes and corresponding paths for indirect arrows.
+    \draw [->] (sum) -| (error);
+    \draw [-] (sum) -- (wfssplit);
+    \draw [->] (wfssplit) |- (slowncpsum);
+    \draw [->] (wfssplit) |- (fastncpsum);
+    \draw [->] (fastcompute) -| (controlsum);
+    \draw [->] (slowcompute) -| (controlsum);
+    \draw [->] (controlsum) -| (zoh);
+
+    \node [input, left of=sfast, node distance=1cm, name=sfastsplit] {};
+    \node [input, below of=sfastsplit, name=sfastturnaway] {};
+    \node [input, right of=sfastturnaway, name=sfastturndown] {};
+    \draw [->] (sfastsplit) -- (sfastturnaway) -- (sfastturndown) |- (fastcontroller);
+
+    \node [input, left of=sslow, node distance=1cm, name=sslowsplit] {};
+    \node [input, below of=sslowsplit, name=sslowturnaway, node distance=1cm] {};
+    \node [input, right of=sslowturnaway, name=sslowturndown, node distance=1cm] {};
+    \draw [->] (sslowsplit) -- (sslowturnaway) -- (sslowturndown) |- (slowcontroller);
+
+    % Explanatory text around blocks.
+    \node [name=X, right of=slowncpsum, node distance=1cm] {};
+    \node [name=Xlabel, above of=X, node distance=0.25cm, blue!80!red] {$X$};
+    \node [name=Y, right of=fastncpsum, node distance=1cm] {};
+    \node [name=Ylabel, above of=Y, node distance=0.25cm, blue!80!red] {$Y$};
+    \filldraw[ blue!80!red] (X) circle (1pt);
+    \filldraw[ blue!80!red] (Y) circle (1pt);
+
+    \node [name=slowwfstext, above of=slowwfsdelay, black!40!green, node distance=0.9cm] {\small Slow WFS delay};
+    \node [name=fastwfstext, above of=fastwfsdelay, black!40!green, node distance=0.9cm] {\small Fast WFS delay};
+    \node [name=slowcomputetext, above of=slowcompute, black!40!green, node distance=0.9cm] {\small Slow computation};
+    \node [name=fastcomputetext, above of=fastcompute, black!40!green, node distance=0.9cm] {\small Fast computation};
+    \node [name=zohtext, below right of=zoh, black!40!green, node distance=1.3cm] {\small DM zero-\\order hold};
+\end{tikzpicture}

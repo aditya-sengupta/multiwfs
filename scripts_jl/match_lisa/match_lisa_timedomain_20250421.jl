@@ -4,32 +4,120 @@ using CairoMakie
 
 sim = simgen_ichpf(0.4, 1.4, 15.0, VonKarman(0.001, 0.25), 50.0; leak=0.995)
 
-atm = npzread("data/olt/olt_atm.npy")
-fastncp = npzread("data/olt/olt_fastncp.npy")
-slowncp = npzread("data/olt/olt_slowncp.npy")
-fastnoise = npzread("data/olt/olt_fastnoise.npy")
-slownoise = npzread("data/olt/olt_slownoise.npy")
 
-slowphase_ts_atm = timedomain_closedloop(sim, (atm=atm, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise*0))
-slowphase_ts_fastncp = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise*0))
-slowphase_ts_slowncp = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp, fastnoise=fastnoise*0, slownoise=slownoise*0))
 
-_, psd_atm = genpsd(atm, 1000.0)
-_, psd_fastncp = genpsd(fastncp, 1000.0)
-_, psd_slowncp = genpsd(slowncp, 1000.0)
-freq, psd_cl_atm = genpsd(slowphase_ts, 1000.0)
-freq, psd_cl_fastncp = genpsd(slowphase_ts_fastncp, 1000.0)
-freq, psd_cl_slowncp = genpsd(slowphase_ts_slowncp, 1000.0)
+db_Nfreqpoints = 1000
+Nfreqpoints = db_Nfreqpoints ÷ 2
+k = Nfreqpoints + 1
+freq = range(0.0, 500.0, k)[2:end]
+
+begin
+    Nrepeat = 100
+    Ntimeseries = 2048
+    psd_ol_atm, psd_ol_fastncp, psd_ol_slowncp, psd_ol_fastnoise, psd_ol_slownoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
+    psd_cl_atm, psd_cl_fastncp, psd_cl_slowncp, psd_cl_fastnoise, psd_cl_slownoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
+    etf_atm, etf_fastncp, etf_slowncp, etf_fastnoise, etf_slownoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
+    for _ in 1:Nrepeat
+        @unpack_namedtuple generate_openloop_timeseries(sim, Ntimeseries)
+        slowphase_ts_atm = timedomain_closedloop(sim, (atm=atm, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise*0))
+        slowphase_ts_fastncp = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise*0))
+        slowphase_ts_slowncp = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp, fastnoise=fastnoise*0, slownoise=slownoise*0))
+        slowphase_ts_fastnoise = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise, slownoise=slownoise*0))
+        slowphase_ts_slownoise = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise))
+
+        psd_atm = gen_avg_per_unb(atm, db_Nfreqpoints)[2:k]
+        psd_fastncp = gen_avg_per_unb(fastncp, db_Nfreqpoints)[2:k]
+        psd_slowncp = gen_avg_per_unb(slowncp, db_Nfreqpoints)[2:k]
+        psd_fastnoise = gen_avg_per_unb(fastnoise, db_Nfreqpoints)[2:k]
+        psd_slownoise = gen_avg_per_unb(slownoise, db_Nfreqpoints)[2:k]
+
+        psd_cl_atm_i = gen_avg_per_unb(slowphase_ts_atm, db_Nfreqpoints)[2:k]
+        psd_cl_fastncp_i = gen_avg_per_unb(slowphase_ts_fastncp, db_Nfreqpoints)[2:k]
+        psd_cl_slowncp_i = gen_avg_per_unb(slowphase_ts_slowncp, db_Nfreqpoints)[2:k]
+        psd_cl_fastnoise_i = gen_avg_per_unb(slowphase_ts_fastnoise, db_Nfreqpoints)[2:k]
+        psd_cl_slownoise_i = gen_avg_per_unb(slowphase_ts_slownoise, db_Nfreqpoints)[2:k]
+
+        psd_ol_atm += psd_atm
+        psd_ol_fastncp += psd_fastncp
+        psd_ol_slowncp += psd_slowncp
+        psd_ol_fastnoise += psd_fastnoise
+        psd_ol_slownoise += psd_slownoise
+
+        psd_cl_atm += psd_cl_atm_i
+        psd_cl_fastncp += psd_cl_fastncp_i
+        psd_cl_slowncp += psd_cl_slowncp_i
+        psd_cl_fastnoise += psd_cl_fastnoise_i
+        psd_cl_slownoise += psd_cl_slownoise_i
+
+        etf_atm += psd_cl_atm_i ./ psd_atm
+        etf_fastncp += psd_cl_fastncp_i ./ psd_fastncp
+        etf_slowncp += psd_cl_slowncp_i ./ psd_slowncp
+        etf_fastnoise += psd_cl_fastnoise_i ./ psd_fastnoise
+        etf_slownoise += psd_cl_slownoise_i ./ psd_slownoise
+    end
+    psd_ol_atm /= Nrepeat
+    psd_ol_fastncp /= Nrepeat
+    psd_ol_slowncp /= Nrepeat
+    psd_ol_fastnoise /= Nrepeat
+    psd_ol_slownoise /= Nrepeat
+    psd_ol_slownoise /= sim.R # adjust for only taking every 10th sample
+
+    psd_cl_atm /= Nrepeat
+    psd_cl_fastncp /= Nrepeat
+    psd_cl_slowncp /= Nrepeat
+    psd_cl_fastnoise /= Nrepeat
+    psd_cl_slownoise /= Nrepeat
+    psd_cl_slownoise /= sim.R # adjust for only taking every 10th sample
+
+    etf_atm /= Nrepeat
+    etf_fastncp /= Nrepeat
+    etf_slowncp /= Nrepeat
+    etf_fastnoise /= Nrepeat
+    etf_slownoise /= Nrepeat
+
+    psd_ol_atm_theory = psd_von_karman.(sim.fr, Ref(sim.vk_atm))
+    psd_ol_ncp_theory = psd_von_karman.(sim.fr, Ref(sim.vk_ncp))
+    psd_ol_noise_theory = repeat([psd_von_karman(sim.f_noise_crossover, sim.vk_atm)], length(sim.fr))
+
+    fig_ol = Figure()
+    axes = [Axis(fig_ol[r,c], xscale=log10, yscale=log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)") for (r, c) in [(1,1), (1,2), (1,3), (2,2), (2,3)]]
+    for (ax, f, psdol_measured, psdol_theory) in zip(
+        axes,
+        [phi_to_X, Lfast_to_X, Lslow_to_X, Nfast_to_X, Nslow_to_X], 
+        [psd_ol_atm, psd_ol_fastncp, psd_ol_slowncp, psd_ol_fastnoise, psd_ol_slownoise],
+        [psd_ol_atm_theory, psd_ol_ncp_theory, psd_ol_ncp_theory, psd_ol_noise_theory, psd_ol_noise_theory]
+    )
+        lines!(ax, freq, psdol_measured)
+        lines!(ax, sim.fr, psdol_theory, linestyle=:dash, color=:black, label="$(string(f))")
+        #CairoMakie.ylims!(ax, 1e-5, 2e3)
+    end
+    fig_ol
+end
+
+begin
+    fig_cl = Figure()
+    axes = [Axis(fig_cl[r,c], xscale=log10, yscale=log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)") for (r, c) in [(1,1), (1,2), (1,3), (2,2), (2,3)]]
+    for (ax, f, psdcl_measured, psdol_theory) in zip(
+        axes, 
+        [phi_to_X, Lfast_to_X, Lslow_to_X, Nfast_to_X, Nslow_to_X], 
+        [psd_cl_atm, psd_cl_fastncp, psd_cl_slowncp, psd_cl_fastnoise, psd_cl_slownoise],
+        [psd_ol_atm_theory, psd_ol_ncp_theory, psd_ol_ncp_theory, psd_ol_noise_theory, psd_ol_noise_theory]
+    )
+        lines!(ax, freq, psdcl_measured)
+        lines!(ax, sim.fr, psdol_theory .* abs2.(f.(sim.sT, Ref(sim))), linestyle=:dash, color=:black, label="$(string(f))")
+        #CairoMakie.ylims!(ax, 1e-5, 2e3)
+    end
+    fig_cl
+end
 
 begin
     fig = Figure()
-    ax = Axis(fig[1,1], xscale=log10, yscale=log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)")
-    lines!(ax, freq, psd_cl_atm ./ psd_atm)
-    #lines!(ax, freq, psd_cl_fastncp ./ psd_fastncp)
-    #lines!(ax, freq, psd_cl_slowncp ./ psd_slowncp)
-    lines!(ax, sim.fr, abs2.(phi_to_X.(sim.sT, Ref(sim))), linestyle=:dash, color=:black)
-    #lines!(ax, sim.fr, abs2.(Lfast_to_X.(sim.sT, Ref(sim))), linestyle=:dash, color=:black)
-    #lines!(ax, sim.fr, abs2.(Lslow_to_X.(sim.sT, Ref(sim))), linestyle=:dash, color=:black)
-    CairoMakie.ylims!(ax, 1e-5, 2e3)
+    axes = [Axis(fig[r,c], xscale=log10, yscale=log10, xlabel="Frequency (Hz)", ylabel="ETF") for (r, c) in [(1,1), (1,2), (1,3), (2,2), (2,3)]]
+    for (ax, f, etf) in zip(axes, [phi_to_X, Lfast_to_X, Lslow_to_X, Nfast_to_X, Nslow_to_X], [etf_atm, etf_fastncp, etf_slowncp, etf_fastnoise, etf_slownoise])
+        lines!(ax, freq, etf)
+        lines!(ax, sim.fr, abs2.(f.(sim.sT, Ref(sim))), linestyle=:dash, color=:black, label="$(string(f))")
+        CairoMakie.ylims!(ax, 1e-5, 2e3)
+        axislegend(ax)
+    end
     fig
 end

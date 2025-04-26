@@ -48,7 +48,7 @@ function gen_avg_per_unb(sig1d0, per_len)
     """
     total_len = length(sig1d0)
     if per_len > total_len
-        throw(ArgumentError("Error! Input periodogram length $per_len is longer than data length $total_len!"))
+        throw(ArgumentError("Error! Input periodogram length $per_len is longer than data length $total_len !"))
     end
 
     sig1d = sig1d0 .- mean(sig1d0)

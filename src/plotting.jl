@@ -1,12 +1,32 @@
 using Plots
 using DSP
 using Base.Meta: parse
-using CairoMakie
+
+symbol_lookup = Dict(
+    "phi" => "ϕ",
+    "Lfast" => "Lfast",
+    "Lslow" => "Lslow",
+    "Nfast" => "Nfast",
+    "Nslow" => "Nslow",
+    "atm" => "Atmosphere",
+    "ncp" => "NCP",
+    "noise" => "Noise"
+)
+
+function fn_to_equation(fname)
+    m = match(r"(.+)_to_(.)", fname)
+    return symbol_lookup[m[1]] * "/" * m[2]
+end
+
+function errsource_to_equation(fname)
+    m = match(r"(.+)_error_at_f_(.)", fname)
+    return symbol_lookup[m[1]] * " at " * m[2]
+end
 
 function nyquist_plot(sim; mark_gm_pm=true, label="Nyquist plot", kwargs...)
     success = :green
     nyquist_contour, gm, gm_point, pm, pm_point = nyquist_and_margins(sim)
-    plot(real(nyquist_contour), imag(nyquist_contour), xlim=(-1.1,1.1), ylim=(-1.1,1.1), aspect_ratio=:equal, label=label; legend=:outertopright, kwargs...)
+    plot(real(nyquist_contour), imag(nyquist_contour), xlim=(-1.1,1.1), ylim=(-1.1,1.1), aspect_ratio=:equal, label=label; legend=:topright, kwargs...)
     phasegrid = range(-π, π, length=500)
     xunit, yunit = cos.(phasegrid), sin.(phasegrid)
     if !is_stable(gm, pm)
@@ -30,7 +50,8 @@ function ten_etf_plots(sim; kwargs...)
         p_v = plot(;legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(sim), digits=3)) rad", xticks=exp10.(-3:2), kwargs...)
         for (fname, c, s) in zip(["phi_to_$v", "Lfast_to_$v", "Lslow_to_$v", "Nfast_to_$v", "Nslow_to_$v"], [1, 2, 2, 3, 3], [:solid, :solid, :dash, :solid, :dash])
             f = eval(parse(fname))
-            plot!(sim.fr, abs2.(f.(sim.sT, Ref(sim))), label="|$fname|²", c=c, ls=s; kwargs...)
+            label = fn_to_equation(fname)
+            plot!(sim.fr, abs2.(f.(sim.sT, Ref(sim))) .+ 1e-30, label="|$label|²", c=c, ls=s; kwargs...)
         end
         push!(plots_etf, p_v)
     end
@@ -39,9 +60,9 @@ end
 
 function five_psd_plots(sim)
     ol_atm = psd_von_karman.(sim.fr, Ref(sim.vk_atm))
-    plot(sim.fr, ol_atm, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Open-loop atm"; xticks=exp10.(-3:2))
-    plot!(sim.fr, psd_von_karman.(sim.fr, Ref(sim.vk_ncp)), label="Open-loop NCP")
-    hline!([psd_von_karman(sim.f_noise_crossover, sim.vk_atm)], label="Open-loop noise")
+    plot(sim.fr, ol_atm, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Open-loop atm", alpha=0.5; xticks=exp10.(-3:2), legend=:topright)
+    plot!(sim.fr, psd_von_karman.(sim.fr, Ref(sim.vk_ncp)), label="Open-loop NCP", alpha=0.5)
+    hline!([psd_von_karman(sim.f_noise_crossover, sim.vk_atm)], label="Open-loop noise", alpha=0.5)
     plot!(sim.fr, error_at_f_X.(sim.fr, Ref(sim)), label="Closed loop at X")
     plot!(sim.fr, error_at_f_Y.(sim.fr, Ref(sim)), label="Closed loop at Y")
 end
@@ -52,9 +73,11 @@ function plot_integrand(errsource, sim; kwargs...)
     p
 end
 
+
 function plot_integrand!(errsource, sim; kwargs...)
+    label = errsource_to_equation(errsource)
     err_source_fn = eval(parse(errsource))
-    plot!(sim.fr, err_source_fn.(sim.fr, Ref(sim)) .+ 1e-20, label=errsource, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad²/Hz)"; ylims=(1e-5, 1e3), legend=:topright, yticks=exp10.(-5:2:5), xticks=exp10.(-3:2), kwargs...)
+    plot!(sim.fr, err_source_fn.(sim.fr, Ref(sim)) .+ 1e-20, label=label, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Closed-loop residual (rad²/Hz)"; ylims=(1e-5, 1e3), legend=:topright, yticks=exp10.(-5:2:5), xticks=exp10.(-3:2), kwargs...)
 end
 
 function plot_integrands(v, sim; kwargs...)

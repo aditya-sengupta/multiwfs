@@ -11,8 +11,6 @@ Generate a time series with a given power spectral density (PSD) model.
 
 copilot-generated off this:
 https://dsp.stackexchange.com/questions/76660/generate-a-time-series-from-power-spectral-density 
-
-This doesn't seem to produce the correct power for white noise...
 """
 function generate_time_series(psd_model::Function, fmax::Float64, npoints::Int)
     fs = 2 * fmax
@@ -38,6 +36,14 @@ function generate_openloop_timeseries(sim, N)
 	fast_ncp_timeseries = subtract_mean(generate_time_series(sim.vk_ncp, sim.f_loop/2, N))
 	fast_noise_timeseries = subtract_mean(generate_time_series(f -> psd_von_karman(sim.f_noise_crossover, sim.vk_atm), sim.f_loop/2, N))
 	slow_noise_timeseries = subtract_mean(generate_time_series(f -> psd_von_karman(sim.f_noise_crossover, sim.vk_atm), sim.f_loop/2, N))
+	curr_v = 0.0
+	for i in eachindex(slow_noise_timeseries)
+		if i % sim.R != 0
+			slow_noise_timeseries[i] = curr_v
+		else
+			curr_v = slow_noise_timeseries[i]
+		end
+	end
     return (atm=atm_timeseries, slowncp=slow_ncp_timeseries, fastncp=fast_ncp_timeseries, slownoise=slow_noise_timeseries, fastnoise=fast_noise_timeseries)
 end
 

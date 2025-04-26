@@ -8,34 +8,6 @@ function ar_psd(f, Φ::Vector{Float64})
     return 1 / abs2(1 - sum(Φ .* exp.(-im * 2π * f * (1:order))))
 end
 
-"""
-Generate a time series with a given power spectral density (PSD) model.
-
-# Arguments
-- `psd_model::Function`: A function that takes a frequency and returns the PSD value at that frequency.
-- `fmax::Float64`: The maximum frequency of interest.
-- `npoints::Int`: The number of points in the discrete PSD.
-
-# Returns
-- `time_series::Vector{Float64}`: The generated time series.
-
-copilot-generated off this:
-https://dsp.stackexchange.com/questions/76660/generate-a-time-series-from-power-spectral-density 
-"""
-function generate_time_series(psd_model::Function, fmax::Float64, npoints::Int)
-    fs = 2 * fmax
-    df = fs / npoints
-    freqs = df * (0:(npoints ÷ 2))
-    psd_values = psd_model.(freqs)
-    amplitudes = sqrt.(npoints * fs * psd_values)
-    phases = 2π * rand(length(amplitudes))
-    complex_amplitudes = amplitudes .* exp.(-im .* phases)
-    full_spectrum = vcat(complex_amplitudes, conj(reverse(complex_amplitudes[2:end-1])))
-    time_series_complex = ifft(full_spectrum)
-    time_series = real(time_series_complex)
-    return time_series
-end
-
 vk_atm = VonKarman(10.0, 0.25 * 0.1031^(-5/3))
 vk_ncp = VonKarman(0.01, 0.25 * 0.6^(-5/3))
 
