@@ -14,7 +14,7 @@ freq_td = range(0.0, 500.0, k)[2:end]
 begin
     Nrepeat = 1
     Ntimeseries = 2048
-    psd_ol_atm, psd_ol_fastncp, psd_ol_slowncp, psd_ol_fastnoise, psd_ol_slownoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
+    psd_ol_atm, psd_ol_fastncp, psd_ol_fastnoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
     for _ in 1:Nrepeat
         ts = generate_openloop_timeseries(sim, Ntimeseries)
 
@@ -22,9 +22,9 @@ begin
         psd_fastncp = gen_avg_per_unb(ts.fastncp, db_Nfreqpoints)[2:k]
         psd_fastnoise = gen_avg_per_unb(ts.fastnoise, db_Nfreqpoints)[2:k]
 
-        psd_ol_atm += psd_atm
-        psd_ol_fastncp += psd_fastncp
-        psd_ol_fastnoise += psd_fastnoise
+        global psd_ol_atm += psd_atm
+        global psd_ol_fastncp += psd_fastncp
+        global psd_ol_fastnoise += psd_fastnoise
     end
     psd_ol_atm /= Nrepeat
     psd_ol_fastncp /= Nrepeat
@@ -37,5 +37,5 @@ begin
     plot!(sim.fr, psd_von_karman.(repeat([f_crossover], length(sim.fr)), Ref(sim.vk_atm)), label="Noise", ls=:dash, color=3)
     plot!(freq_td, psd_ol_fastnoise, alpha=0.7, color=3, label="Noise time-domain")
 
-    Plots.savefig(p, "paper/figures/openloop_psds.pdf")
+    Plots.savefig(p, "externalization/figures_tex/openloop_psds.tex")
 end
