@@ -15,7 +15,7 @@ symbol_lookup = Dict(
 
 function fn_to_equation(fname)
     m = match(r"(.+)_to_(.)", fname)
-    return symbol_lookup[m[1]] * "/" * m[2]
+    return m[2] * "/" * symbol_lookup[m[1]]
 end
 
 function errsource_to_equation(fname)
@@ -47,7 +47,7 @@ function ten_etf_plots(sim; kwargs...)
     plots_etf = []
     for v in ["X", "Y"]
         ne = eval(parse("notched_error_$v"))
-        p_v = plot(;legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="ETF", ylims=(1e-10, 1e2), title="$v error = $(round(ne(sim), digits=3)) rad", xticks=exp10.(-3:2), kwargs...)
+        p_v = plot(;legend=:bottomright, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="|Error transfer function|²", ylims=(1e-10, 1e2), title="$v error = $(round(ne(sim), digits=3)) rad", xticks=exp10.(-3:2), kwargs...)
         for (fname, c, s) in zip(["phi_to_$v", "Lfast_to_$v", "Lslow_to_$v", "Nfast_to_$v", "Nslow_to_$v"], [1, 2, 2, 3, 3], [:solid, :solid, :dash, :solid, :dash])
             f = eval(parse(fname))
             label = fn_to_equation(fname)
@@ -58,9 +58,9 @@ function ten_etf_plots(sim; kwargs...)
     plots_etf
 end
 
-function five_psd_plots(sim)
+function five_psd_plots(sim; kwargs...)
     ol_atm = psd_von_karman.(sim.fr, Ref(sim.vk_atm))
-    plot(sim.fr, ol_atm, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Open-loop atm", alpha=0.5; xticks=exp10.(-3:2), legend=:topright)
+    plot(sim.fr, ol_atm, xscale=:log10, yscale=:log10, xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Open-loop atm", alpha=0.5;xticks=exp10.(-3:2), legend=:topright, kwargs...)
     plot!(sim.fr, psd_von_karman.(sim.fr, Ref(sim.vk_ncp)), label="Open-loop NCP", alpha=0.5)
     hline!([psd_von_karman(sim.f_noise_crossover, sim.vk_atm)], label="Open-loop noise", alpha=0.5)
     plot!(sim.fr, error_at_f_X.(sim.fr, Ref(sim)), label="Closed loop at X")

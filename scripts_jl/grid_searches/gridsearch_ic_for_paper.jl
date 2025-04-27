@@ -16,9 +16,9 @@ for r0_ncp in r0_ncp_vals
     vk_ncp = VonKarman(0.3 * 0.01 / 3.0, 0.25 * r0_ncp^(-5/3))
     for f_crossover in f_crossover_vals
         println(string((r0_ncp,f_crossover)))
-        all_opt[string((r0_ncp,f_crossover))] = [grid_search_coarse_to_fine(gf -> simgen_ichpf(gf, 0.0, 0.0, vk_ncp, f_crossover), [[0.0, 1.0]], search="parallel")[1],
-        grid_search_coarse_to_fine((gf, gs) -> simgen_ichpf(gf, gs, 0.0, vk_ncp, f_crossover), [[0.0, 1.0], [0.0, 2.0]], search="parallel")[1],
-        grid_search_coarse_to_fine((gf, gs, fc) -> simgen_ichpf(gf, gs, fc, vk_ncp, f_crossover), [[0.0, 1.0], [0.0, 2.0], [0.0, 200.0]], search="parallel")[1],
+        all_opt[string((r0_ncp,f_crossover))] = [grid_search_coarse_to_fine(gf -> simgen_ichpf(gf, 0.0, 0.0, vk_ncp, f_crossover), [[0.0, 1.0]], search="parallel", niter=5)[1],
+        grid_search_coarse_to_fine((gf, gs) -> simgen_ichpf(gf, gs, 0.0, vk_ncp, f_crossover), [[0.0, 1.0], [0.0, 2.0]], search="parallel", niter=5)[1],
+        grid_search_coarse_to_fine((gf, gs, fc) -> simgen_ichpf(gf, gs, fc, vk_ncp, f_crossover), [[0.0, 1.0], [0.0, 2.0], [0.0, 200.0]], search="parallel", niter=7, npoints_per_parameter=21)[1],
         ]
     end
 end

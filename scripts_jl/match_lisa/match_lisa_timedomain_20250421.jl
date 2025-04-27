@@ -2,9 +2,7 @@ using multiwfs
 using NPZ
 using CairoMakie
 
-sim = simgen_ichpf(0.4, 1.4, 15.0, VonKarman(0.001, 0.25), 50.0; leak=0.995)
-
-
+sim = simgen_ichpf(0.4, 1.4, 15.0, VonKarman(0.001, 0.25), 50.0; leak=0.999)
 
 db_Nfreqpoints = 1000
 Nfreqpoints = db_Nfreqpoints ÷ 2
@@ -18,18 +16,18 @@ begin
     psd_cl_atm, psd_cl_fastncp, psd_cl_slowncp, psd_cl_fastnoise, psd_cl_slownoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
     etf_atm, etf_fastncp, etf_slowncp, etf_fastnoise, etf_slownoise = zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints), zeros(Nfreqpoints)
     for _ in 1:Nrepeat
-        @unpack_namedtuple generate_openloop_timeseries(sim, Ntimeseries)
-        slowphase_ts_atm = timedomain_closedloop(sim, (atm=atm, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise*0))
-        slowphase_ts_fastncp = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise*0))
-        slowphase_ts_slowncp = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp, fastnoise=fastnoise*0, slownoise=slownoise*0))
-        slowphase_ts_fastnoise = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise, slownoise=slownoise*0))
-        slowphase_ts_slownoise = timedomain_closedloop(sim, (atm=atm*0, fastncp=fastncp*0, slowncp=slowncp*0, fastnoise=fastnoise*0, slownoise=slownoise))
+        ts = generate_openloop_timeseries(sim, Ntimeseries)
+        slowphase_ts_atm = timedomain_closedloop(sim, (atm=ts.atm, fastncp=ts.fastncp*0, slowncp=ts.slowncp*0, fastnoise=ts.fastnoise*0, slownoise=ts.slownoise*0))
+        slowphase_ts_fastncp = timedomain_closedloop(sim, (atm=ts.atm*0, fastncp=ts.fastncp, slowncp=ts.slowncp*0, fastnoise=ts.fastnoise*0, slownoise=ts.slownoise*0))
+        slowphase_ts_slowncp = timedomain_closedloop(sim, (atm=ts.atm*0, fastncp=ts.fastncp*0, slowncp=ts.slowncp, fastnoise=ts.fastnoise*0, slownoise=ts.slownoise*0))
+        slowphase_ts_fastnoise = timedomain_closedloop(sim, (atm=ts.atm*0, fastncp=ts.fastncp*0, slowncp=ts.slowncp*0, fastnoise=ts.fastnoise, slownoise=ts.slownoise*0))
+        slowphase_ts_slownoise = timedomain_closedloop(sim, (atm=ts.atm*0, fastncp=ts.fastncp*0, slowncp=ts.slowncp*0, fastnoise=ts.fastnoise*0, slownoise=ts.slownoise))
 
-        psd_atm = gen_avg_per_unb(atm, db_Nfreqpoints)[2:k]
-        psd_fastncp = gen_avg_per_unb(fastncp, db_Nfreqpoints)[2:k]
-        psd_slowncp = gen_avg_per_unb(slowncp, db_Nfreqpoints)[2:k]
-        psd_fastnoise = gen_avg_per_unb(fastnoise, db_Nfreqpoints)[2:k]
-        psd_slownoise = gen_avg_per_unb(slownoise, db_Nfreqpoints)[2:k]
+        psd_atm = gen_avg_per_unb(ts.atm, db_Nfreqpoints)[2:k]
+        psd_fastncp = gen_avg_per_unb(ts.fastncp, db_Nfreqpoints)[2:k]
+        psd_slowncp = gen_avg_per_unb(ts.slowncp, db_Nfreqpoints)[2:k]
+        psd_fastnoise = gen_avg_per_unb(ts.fastnoise, db_Nfreqpoints)[2:k]
+        psd_slownoise = gen_avg_per_unb(ts.slownoise, db_Nfreqpoints)[2:k]
 
         psd_cl_atm_i = gen_avg_per_unb(slowphase_ts_atm, db_Nfreqpoints)[2:k]
         psd_cl_fastncp_i = gen_avg_per_unb(slowphase_ts_fastncp, db_Nfreqpoints)[2:k]

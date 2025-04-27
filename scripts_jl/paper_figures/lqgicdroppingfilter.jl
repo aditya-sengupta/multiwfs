@@ -1,5 +1,7 @@
 using multiwfs
 using JLD2
+using Plots
+pgfplotsx()
 
 # - pull an optimized IC-HPF and the equivalent LQG-IC-HPF
 
@@ -25,21 +27,21 @@ end
 
 # - therefore, am I able to improve X error by using the f_cutoff from IC-HPF but the controller from LQG-IC? Expect something weird here.
 
-sim_ic_without_cutoff = simgen_lqgicfasthpf(optpars["($r0_ncp, $f_crossover)"][3][1:end-1]..., 0.0, vk, f_crossover)
+sim_ic_without_cutoff = simgen_ichpf(optpars["($r0_ncp, $f_crossover)"][3][1:end-1]..., 0.0, vk, f_crossover)
 
 sim_lqgic_with_ichpfcutoff = simgen_lqgicfasthpf(optpars["($r0_ncp, $f_crossover)"][4][1:end-1]..., optpars["($r0_ncp, $f_crossover)"][3][3], vk, f_crossover)
 notched_error_X(sim_lqgic_with_ichpfcutoff)
 
 begin
-    p1 = plot(sim_ic.fr, abs2.(phi_to_X.(sim_ic.sT, Ref(sim_ic))), xscale=:log10, yscale=:log10, label="Optimized IC", legend=:bottomright)
+    p1 = plot(sim_ic.fr, abs2.(phi_to_X.(sim_ic.sT, Ref(sim_ic))), xscale=:log10, yscale=:log10, label="Optimized IC", legend=:bottomright, legendfontsize=18, labelfontsize=24)
     plot!(sim_lqgic.fr, abs2.(phi_to_X.(sim_lqgic.sT, Ref(sim_lqgic))), xscale=:log10, yscale=:log10, label="Optimized LQG-IC")
-    plot!(sim_lqgic_with_ichpfcutoff.fr, abs2.(phi_to_X.(sim_lqgic_with_ichpfcutoff.sT, Ref(sim_lqgic_with_ichpfcutoff))), xscale=:log10, yscale=:log10, label="LQG-IC plus filter", xlabel="Frequency (Hz)", ylabel="ETF atmosphere to X", xticks=exp10.(-3:2))
+    plot!(sim_lqgic_with_ichpfcutoff.fr, abs2.(phi_to_X.(sim_lqgic_with_ichpfcutoff.sT, Ref(sim_lqgic_with_ichpfcutoff))), xscale=:log10, yscale=:log10, label="LQG-IC plus filter", xlabel="Frequency (Hz)", ylabel="|X/ϕ|²", xticks=exp10.(-3:2))
+    Plots.savefig("externalization/figures_tex/dropping_filter_atm.tex")
 end
 
 begin
-    p2 = plot(sim_ic.fr, abs2.(Lslow_to_X.(sim_ic.sT, Ref(sim_ic))), xscale=:log10, yscale=:log10, label="Optimized IC", legend=:bottomright)
+    p2 = plot(sim_ic.fr, abs2.(Lslow_to_X.(sim_ic.sT, Ref(sim_ic))), xscale=:log10, yscale=:log10, label="Optimized IC", legend=:bottomright, legendfontsize=18, labelfontsize=24)
     plot!(sim_lqgic.fr, abs2.(Lslow_to_X.(sim_lqgic.sT, Ref(sim_lqgic))), xscale=:log10, yscale=:log10, label="Optimized LQG-IC")
-    plot!(sim_lqgic_with_ichpfcutoff.fr, abs2.(Lslow_to_X.(sim_lqgic_with_ichpfcutoff.sT, Ref(sim_lqgic_with_ichpfcutoff))), xscale=:log10, yscale=:log10, label="LQG-IC plus filter", xlabel="Frequency (Hz)", ylabel="ETF X NCP to X", xticks=exp10.(-3:2))
+    plot!(sim_lqgic_with_ichpfcutoff.fr, abs2.(Lslow_to_X.(sim_lqgic_with_ichpfcutoff.sT, Ref(sim_lqgic_with_ichpfcutoff))), xscale=:log10, yscale=:log10, label="LQG-IC plus filter", xlabel="Frequency (Hz)", ylabel="|X/Lslow|²", xticks=exp10.(-3:2))
+    Plots.savefig("externalization/figures_tex/dropping_filter_lslow.tex")
 end
-
-plot(p1, p2,)

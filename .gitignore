@@ -7,3 +7,4 @@ data/
 *.jld2
 *.png
 *.mp4
+externalization/
