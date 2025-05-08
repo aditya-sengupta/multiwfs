@@ -37,7 +37,7 @@ function plant(sT, sim::Simulation)
     zero_order_hold = (1 - exp(-sT)) / sT
     computational_delay = exp(-sT)
     fast_term = wfs_delay * transfer_function(sim.fast_controller, sT * sim.f_loop) * computational_delay * zero_order_hold
-    slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2 # * computational_delay
+    slow_term = transfer_function(sim.slow_controller, sT * sim.f_loop) * ((1 - exp(-sT * sim.R)) / (sT * sim.R))^2
     return fast_term + slow_term
 end
 
@@ -96,14 +96,32 @@ function atm_error_at_f_X(f, sim::Simulation)
     psd_von_karman(f, sim.vk_atm) * abs2(phi_to_X(sT, sim))
 end
 
-function ncp_error_at_f_X(f, sim::Simulation)
+function fast_ncp_error_at_f_X(f, sim::Simulation)
     sT = 2π * im * f / sim.f_loop
-    psd_von_karman(f, sim.vk_ncp) * (abs2(Lfast_to_X(sT, sim)) + abs2(Lslow_to_X(sT, sim)))
+    psd_von_karman(f, sim.vk_ncp) * abs2(Lfast_to_X(sT, sim))
+end
+
+function slow_ncp_error_at_f_X(f, sim::Simulation)
+    sT = 2π * im * f / sim.f_loop
+    psd_von_karman(f, sim.vk_ncp) * abs2(Lslow_to_X(sT, sim))
+end
+
+function ncp_error_at_f_X(f, sim::Simulation)
+   fast_ncp_error_at_f_X(f, sim) + slow_ncp_error_at_f_X(f, sim)
+end
+
+function fast_noise_error_at_f_X(f, sim::Simulation)
+    sT = 2π * im * f / sim.f_loop
+    sim.noise_normalization * abs2(Nfast_to_X(sT, sim))
+end
+
+function slow_noise_error_at_f_X(f, sim::Simulation)
+    sT = 2π * im * f / sim.f_loop
+    sim.noise_normalization * abs2(Nslow_to_X(sT, sim))
 end
 
 function noise_error_at_f_X(f, sim::Simulation)
-    sT = 2π * im * f / sim.f_loop
-    sim.noise_normalization * (abs2(Nfast_to_X(sT, sim)) + abs2(Nslow_to_X(sT, sim)))
+    fast_noise_error_at_f_X(f, sim) + slow_noise_error_at_f_X(f, sim)
 end
 
 function error_at_f_X(f, sim::Simulation)

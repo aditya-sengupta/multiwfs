@@ -1,7 +1,6 @@
 using multiwfs
 using JLD2
 using Plots
-pgfplotsx()
 
 vk_ncp = VonKarman(0.001, 0.25)
 f_noise_crossover = 50.0

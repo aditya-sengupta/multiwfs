@@ -1,15 +1,16 @@
 using multiwfs
 using JLD2
 using Plots
+using Plots.PlotMeasures: mm
 pgfplotsx()
 
 vk_ncp = VonKarman(0.001, 0.25)
 f_noise_crossover = 50.0
 
-gain_fast, gain_slow, f_cutoff = load("ic_opt_for_paper.jld2")["(1.0, 50.0)"][3]
+gain_fast, gain_slow, f_cutoff = load("data/ic_opt_lisa_20250430.jld2")["(1.0, 50.0)"][1]
 sim = simgen_ichpf(gain_fast, gain_slow, f_cutoff, VonKarman(0.001, 0.25), 50.0)
-n1 = nyquist_plot(sim; size=(350,350), tickfontsize=18)
-ex, ey = ten_etf_plots(sim, titlefontsize=24, labelfontsize=18, tickfontsize=18)
+n1 = nyquist_plot(sim; size=(350,350), tickfontsize=18, legendfontsize=12, legend=:bottomright)
+ex, ey = ten_etf_plots(sim, titlefontsize=24, labelfontsize=18, tickfontsize=18, legendfontsize=16, legend=:bottomright)
 
 parameter_names = ["Fast-WFS gain", "Slow-WFS gain", "Filter cutoff frequency"]
 parameter_centers = [gain_fast, gain_slow, f_cutoff]
@@ -18,7 +19,7 @@ parameter_grids = [fractional_change .* x for x in parameter_centers]
 
 # resolved parameter minimum grid
 begin
-    minplot = plot(legend=:topright, xlabel="Fractional change in parameter", labelfontsize=18, tickfontsize=18)
+    minplot = plot(legend=:topright, xlabel="Fractional change in parameter", labelfontsize=18, tickfontsize=18, legendfontsize=16)
     for (i, (parname, pargrid)) in enumerate(zip(parameter_names, parameter_grids))
         Xerrs_parsweep = []
         for par in pargrid
@@ -32,13 +33,16 @@ begin
     minplot
 end
 
-integrands = plot_integrands("XY", sim, labelfontsize=18, tickfontsize=18)
-psds = five_psd_plots(sim, labelfontsize=18, tickfontsize=18)
+integrands = plot_integrands("XY", sim, labelfontsize=18, tickfontsize=18, legendfontsize=12, legend=:topleft)
+psds = five_psd_plots(sim, labelfontsize=18, tickfontsize=18, legendfontsize=12, legend=:bottomleft)
 
-doublewfs_hpf = plot(n1, ex, ey, integrands, psds, minplot, size=(1200,800))
-Plots.savefig(n1, "externalization/figures_tex/nyquist_doublewfs_hpf.tex")
-Plots.savefig(ex, "externalization/figures_tex/errx_doublewfs_hpf.tex")
-Plots.savefig(ey, "externalization/figures_tex/erry_doublewfs_hpf.tex")
-Plots.savefig(integrands, "externalization/figures_tex/integrands_doublewfs_hpf.tex")
-Plots.savefig(psds, "externalization/figures_tex/psds_doublewfs_hpf.tex")
-Plots.savefig(minplot, "externalization/figures_tex/minplot_doublewfs_hpf.tex")
+for_paper = true
+if for_paper
+    Plots.savefig(n1, "externalization/figures_tex/nyquist_doublewfs_hpf.tex")
+    Plots.savefig(ex, "externalization/figures_tex/errx_doublewfs_hpf.tex")
+    Plots.savefig(ey, "externalization/figures_tex/erry_doublewfs_hpf.tex")
+    Plots.savefig(integrands, "externalization/figures_tex/integrands_doublewfs_hpf.tex")
+    Plots.savefig(psds, "externalization/figures_tex/psds_doublewfs_hpf.tex")
+    Plots.savefig(minplot, "externalization/figures_tex/minplot_doublewfs_hpf.tex")
+end
+# doublewfs_hpf = plot(n1, ex, ey, integrands, psds, minplot, size=(1200,800), right_margin=10mm)

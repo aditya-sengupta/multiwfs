@@ -29,12 +29,13 @@ begin
     psd_ol_atm /= Nrepeat
     psd_ol_fastncp /= Nrepeat
     psd_ol_fastnoise /= Nrepeat
+    fr = sim.fr[sim.fr .>= 1e-1]
 
-    p = plot(sim.fr, psd_von_karman.(sim.fr, Ref(sim.vk_atm)), xscale=:log10, yscale=:log10, xticks=exp10.(-3:2), xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Atmosphere", ls=:dash, color=1, legend=:topright)
+    p = plot(fr, psd_von_karman.(fr, Ref(sim.vk_atm)), xscale=:log10, yscale=:log10, xticks=exp10.(-3:2), xlabel="Frequency (Hz)", ylabel="Power (rad²/Hz)", label="Atmosphere", ls=:dash, color=1, legend=:topright)
     plot!(freq_td, psd_ol_atm, alpha=0.7, color=1, label="Atmosphere time-domain")
-    plot!(sim.fr, psd_von_karman.(sim.fr, Ref(sim.vk_ncp)), label="NCP", ls=:dash, color=2)
+    plot!(fr, psd_von_karman.(fr, Ref(sim.vk_ncp)), label="NCP", ls=:dash, color=2)
     plot!(freq_td, psd_ol_fastncp, alpha=0.7, color=2, label="NCP time-domain")
-    plot!(sim.fr, psd_von_karman.(repeat([f_crossover], length(sim.fr)), Ref(sim.vk_atm)), label="Noise", ls=:dash, color=3)
+    plot!(fr, psd_von_karman.(repeat([f_crossover], length(fr)), Ref(sim.vk_atm)), label="Noise", ls=:dash, color=3)
     plot!(freq_td, psd_ol_fastnoise, alpha=0.7, color=3, label="Noise time-domain")
 
     Plots.savefig(p, "externalization/figures_tex/openloop_psds.tex")

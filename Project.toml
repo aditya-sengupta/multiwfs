@@ -32,6 +32,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SciPy = "ebc72ef8-9537-4fb0-b64e-ac76025fed2d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 CSV = "0.10.15"
@@ -48,3 +49,4 @@ PGFPlotsX = "1.6.2"
 Plots = "1.40.13"
 Pluto = "0.20.6"
 PlutoLinks = "0.1.6"
+StatsPlots = "0.15.7"

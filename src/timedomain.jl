@@ -30,21 +30,21 @@ function generate_time_series(vk::VonKarman, fmax::Float64, npoints::Int)
     return generate_time_series(f -> psd_von_karman(f, vk), fmax, npoints)
 end
 
-function generate_openloop_timeseries(sim, N)
+function generate_openloop_timeseries(sim, N, activations=[1,1,1,1,1])
     atm_timeseries = generate_time_series(sim.vk_atm, sim.f_loop/2, N)
 	slow_ncp_timeseries = subtract_mean(generate_time_series(sim.vk_ncp, sim.f_loop/2, N))
 	fast_ncp_timeseries = subtract_mean(generate_time_series(sim.vk_ncp, sim.f_loop/2, N))
 	fast_noise_timeseries = subtract_mean(generate_time_series(f -> psd_von_karman(sim.f_noise_crossover, sim.vk_atm), sim.f_loop/2, N))
 	slow_noise_timeseries = subtract_mean(generate_time_series(f -> psd_von_karman(sim.f_noise_crossover, sim.vk_atm), sim.f_loop/2, N))
-	curr_v = 0.0
+	"""curr_v = 0.0
 	for i in eachindex(slow_noise_timeseries)
 		if i % sim.R != 0
 			slow_noise_timeseries[i] = curr_v
 		else
 			curr_v = slow_noise_timeseries[i]
 		end
-	end
-    return (atm=atm_timeseries, slowncp=slow_ncp_timeseries, fastncp=fast_ncp_timeseries, slownoise=slow_noise_timeseries, fastnoise=fast_noise_timeseries)
+	end"""
+    return (atm=atm_timeseries*activations[1], fastncp=fast_ncp_timeseries*activations[2], slowncp=slow_ncp_timeseries*activations[3], fastnoise=fast_noise_timeseries*activations[4], slownoise=slow_noise_timeseries*activations[5])
 end
 
 function timedomain_closedloop(sim, all_timeseries)
@@ -60,6 +60,7 @@ function timedomain_closedloop(sim, all_timeseries)
 	slow_buffer = zeros(1+sim.R)
 	for i in 1:N
 		slow_update_this_iteration = i % sim.R == 0
+		# slow_update_this_iteration = i > sim.R
 		this_e = all_timeseries.atm[i] - current_dm
 		fast_buffer[end] = this_e + all_timeseries.fastncp[i]
 		fast_this_s = fast_buffer[begin]
