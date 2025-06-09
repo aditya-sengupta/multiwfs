@@ -176,7 +176,8 @@ def run_cl_2sensor(input_ts, decimation, delayfr=1, \
         if debugMA:
             # this will update the moving-average on the
             # slow sensor every fast time step, WHICH IS NOT PHYSICAL
-            slow_this_s = np.sum(slow_buffer[0:dec])/dec
+            slow_this_s = slow_buffer[0]
+            # slow_this_s = np.sum(slow_buffer[0:dec])/dec
         else:
             # the actual physical slow sensor, which samples every decimation steps...
             if np.mod(t, dec) == (dec-1):

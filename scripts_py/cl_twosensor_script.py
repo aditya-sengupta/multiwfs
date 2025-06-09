@@ -12,8 +12,9 @@ noise_fast = np.load("../data/olt/olt_fastnoise.npy")
 noise_slow = np.load("../data/olt/olt_slownoise.npy")
 
 # %%
+freq = np.linspace(0.0, 500.0, 1025)[1:]
 for (ts, n) in zip([atm, ncp_fast, noise_fast], ["atm", "ncp", "noise"]):
-    plt.loglog(*genpsd(ts, 1e-3), label=n)
+    plt.loglog(freq, genAvgPerUnb(ts, 2048)[1:1025], label=n)
 plt.xlabel("Frequency (Hz)")
 plt.ylabel(r"Power (rad${}^2$/Hz)")
 plt.legend()
@@ -23,19 +24,19 @@ meas_slow_ts, \
 meas_fast_ts, \
 meas_fast_af_ts, \
 slowphase_ts= \
-    run_cl_2sensor(atm*0, 10, delayfr=1, \
+    run_cl_2sensor(atm, 10, delayfr=1, \
                     slow_gain=1.4, fast_gain=0.4, integ=0.995,
                     ar1hp_coeff=0.91,
                     ncptimeseries=ncp_fast*0,
                     slowncptimeseries=ncp_slow*0,
                     mnoisetimeseries=noise_fast*0,
-                    slowmnoisetimeseries=noise_slow
+                    slowmnoisetimeseries=noise_slow*0,
+                    debugMA=True
                     )
     
 
 psd_noise_slow = genAvgPerUnb(noise_slow, 2048)[1:1025]
 psd_cl = genAvgPerUnb(slowphase_ts, 2048)[1:1025]
-freq = np.linspace(0.0, 500.0, 1025)[1:]
 
 #plt.loglog(freq, psd_cl / psd_atm)
 plt.loglog(freq, psd_cl / psd_noise_slow)

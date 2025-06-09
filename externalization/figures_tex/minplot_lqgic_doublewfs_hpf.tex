@@ -1,0 +1,134 @@
+% Recommended preamble:
+% \usetikzlibrary{arrows.meta}
+% \usetikzlibrary{backgrounds}
+% \usepgfplotslibrary{patchplots}
+% \usepgfplotslibrary{fillbetween}
+% \pgfplotsset{%
+%     layers/standard/.define layer set={%
+%         background,axis background,axis grid,axis ticks,axis lines,axis tick labels,pre main,main,axis descriptions,axis foreground%
+%     }{
+%         grid style={/pgfplots/on layer=axis grid},%
+%         tick style={/pgfplots/on layer=axis ticks},%
+%         axis line style={/pgfplots/on layer=axis lines},%
+%         label style={/pgfplots/on layer=axis descriptions},%
+%         legend style={/pgfplots/on layer=axis descriptions},%
+%         title style={/pgfplots/on layer=axis descriptions},%
+%         colorbar style={/pgfplots/on layer=axis descriptions},%
+%         ticklabel style={/pgfplots/on layer=axis tick labels},%
+%         axis background@ style={/pgfplots/on layer=axis background},%
+%         3d box foreground style={/pgfplots/on layer=axis foreground},%
+%     },
+% }
+
+\begin{tikzpicture}[/tikz/background rectangle/.style={fill={rgb,1:red,1.0;green,1.0;blue,1.0}, fill opacity={1.0}, draw opacity={1.0}}, show background rectangle]
+\begin{axis}[point meta max={nan}, point meta min={nan}, legend cell align={left}, legend columns={1}, title={}, title style={at={{(0.5,1)}}, anchor={south}, font={{\fontsize{14 pt}{18.2 pt}\selectfont}}, color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, rotate={0.0}, align={center}}, legend style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, line width={1}, solid, fill={rgb,1:red,1.0;green,1.0;blue,1.0}, fill opacity={1.0}, text opacity={1.0}, font={{\fontsize{20 pt}{26.0 pt}\selectfont}}, text={rgb,1:red,0.0;green,0.0;blue,0.0}, cells={anchor={center}}, at={(0.98, 0.98)}, anchor={north east}}, axis background/.style={fill={rgb,1:red,1.0;green,1.0;blue,1.0}, opacity={1.0}}, anchor={north west}, xshift={1.0mm}, yshift={-1.0mm}, width={150.4mm}, height={99.6mm}, scaled x ticks={false}, xlabel={Fractional change in parameter}, x tick style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, opacity={1.0}}, x tick label style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, opacity={1.0}, rotate={0}}, xlabel style={at={(ticklabel cs:0.5)}, anchor=near ticklabel, at={{(ticklabel cs:0.5)}}, anchor={near ticklabel}, font={{\fontsize{20 pt}{26.0 pt}\selectfont}}, color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, rotate={0.0}}, xmajorgrids={true}, xmin={0.8939999999999999}, xmax={1.106}, xticklabels={{$0.90$,$0.95$,$1.00$,$1.05$,$1.10$}}, xtick={{0.9000000000000001,0.9500000000000002,1.0000000000000002,1.0500000000000003,1.1000000000000003}}, xtick align={inside}, xticklabel style={font={{\fontsize{20 pt}{26.0 pt}\selectfont}}, color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, rotate={0.0}}, x grid style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={0.1}, line width={0.5}, solid}, axis x line*={left}, x axis line style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, line width={1}, solid}, scaled y ticks={false}, ylabel={Error at X (rad)}, y tick style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, opacity={1.0}}, y tick label style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, opacity={1.0}, rotate={0}}, ylabel style={at={(ticklabel cs:0.5)}, anchor=near ticklabel, at={{(ticklabel cs:0.5)}}, anchor={near ticklabel}, font={{\fontsize{20 pt}{26.0 pt}\selectfont}}, color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, rotate={0.0}}, ymajorgrids={true}, ymin={0.9611586207798588}, ymax={0.962091749175845}, yticklabels={{$0.9612$,$0.9614$,$0.9616$,$0.9618$,$0.9620$}}, ytick={{0.9612,0.9614,0.9616,0.9618000000000001,0.9620000000000001}}, ytick align={inside}, yticklabel style={font={{\fontsize{20 pt}{26.0 pt}\selectfont}}, color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, rotate={0.0}}, y grid style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={0.1}, line width={0.5}, solid}, axis y line*={left}, y axis line style={color={rgb,1:red,0.0;green,0.0;blue,0.0}, draw opacity={1.0}, line width={1}, solid}, colorbar={false}]
+    \addplot[color={rgb,1:red,0.9333;green,0.6039;blue,0.0}, name path={123}, draw opacity={1.0}, line width={1}, solid]
+        table[row sep={\\}]
+        {
+            \\
+            0.9  0.9620653398816189  \\
+            0.91  0.9618842560823776  \\
+            0.92  0.9617268306286169  \\
+            0.93  0.9615918826904761  \\
+            0.94  0.9614782688574015  \\
+            0.95  0.9613848829212046  \\
+            0.96  0.9613106555855004  \\
+            0.97  0.9612545541075517  \\
+            0.98  0.9612155818783676  \\
+            0.99  0.9611927779467003  \\
+            1.0  0.9611852164923685  \\
+            1.01  0.961192006254117  \\
+            1.02  0.9612122899168926  \\
+            1.03  0.9612452434637643  \\
+            1.04  0.9612900754959466  \\
+            1.05  0.9613460265263998  \\
+            1.06  0.9614123682502314  \\
+            1.07  0.961488402795974  \\
+            1.08  0.9615734619612407  \\
+            1.09  0.9616669064360854  \\
+            1.1  0.9617681250171637  \\
+        }
+        ;
+    \addlegendentry {$\alpha$ slow num. nines}
+    \addplot[color={rgb,1:red,0.0;green,0.0;blue,0.0}, name path={124}, draw opacity={1.0}, line width={1}, dashed, forget plot]
+        table[row sep={\\}]
+        {
+            \\
+            1.0  0.9602254923838727  \\
+            1.0  0.9630248775718311  \\
+        }
+        ;
+    \addplot[color={rgb,1:red,0.3059;green,0.9333;blue,0.5804}, name path={125}, draw opacity={1.0}, line width={1}, solid]
+        table[row sep={\\}]
+        {
+            \\
+            0.9  0.9611852165392885  \\
+            0.91  0.961185216528566  \\
+            0.92  0.9611852165200492  \\
+            0.93  0.9611852165132837  \\
+            0.94  0.9611852165079098  \\
+            0.95  0.961185216503641  \\
+            0.96  0.9611852165002505  \\
+            0.97  0.9611852164975571  \\
+            0.98  0.9611852164954177  \\
+            0.99  0.9611852164937184  \\
+            1.0  0.9611852164923685  \\
+            1.01  0.9611852164912963  \\
+            1.02  0.9611852164904445  \\
+            1.03  0.961185216489768  \\
+            1.04  0.9611852164892307  \\
+            1.05  0.9611852164888037  \\
+            1.06  0.9611852164884647  \\
+            1.07  0.9611852164881954  \\
+            1.08  0.9611852164879816  \\
+            1.09  0.9611852164878114  \\
+            1.1  0.9611852164876765  \\
+        }
+        ;
+    \addlegendentry {log$_1$$_0$(slow noise)}
+    \addplot[color={rgb,1:red,0.0;green,0.0;blue,0.0}, name path={126}, draw opacity={1.0}, line width={1}, dashed, forget plot]
+        table[row sep={\\}]
+        {
+            \\
+            1.0  0.9602254923838727  \\
+            1.0  0.9630248775718311  \\
+        }
+        ;
+    \addplot[color={rgb,1:red,0.6235;green,0.4745;blue,0.9333}, name path={127}, draw opacity={1.0}, line width={1}, solid]
+        table[row sep={\\}]
+        {
+            \\
+            0.9  0.9611860686100044  \\
+            0.91  0.9611859148267817  \\
+            0.92  0.9611857827258389  \\
+            0.93  0.9611856692500249  \\
+            0.94  0.9611855717732701  \\
+            0.95  0.9611854880397914  \\
+            0.96  0.9611854161118754  \\
+            0.97  0.9611853543250252  \\
+            0.98  0.9611853012494348  \\
+            0.99  0.9611852556568953  \\
+            1.0  0.9611852164923685  \\
+            1.01  0.9611851828495706  \\
+            1.02  0.9611851539499966  \\
+            1.03  0.9611851291249045  \\
+            1.04  0.9611851077998386  \\
+            1.05  0.9611850894813365  \\
+            1.06  0.9611850737455085  \\
+            1.07  0.9611850602282296  \\
+            1.08  0.9611850486167112  \\
+            1.09  0.9611850386422649  \\
+            1.1  0.9611850300740848  \\
+        }
+        ;
+    \addlegendentry {$\alpha$ fast num. nines}
+    \addplot[color={rgb,1:red,0.0;green,0.0;blue,0.0}, name path={128}, draw opacity={1.0}, line width={1}, dashed, forget plot]
+        table[row sep={\\}]
+        {
+            \\
+            1.0  0.9602254923838727  \\
+            1.0  0.9630248775718311  \\
+        }
+        ;
+\end{axis}
+\end{tikzpicture}

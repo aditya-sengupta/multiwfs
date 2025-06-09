@@ -2,9 +2,3 @@ multiwfs.egg-info
 __pycache__
 data/
 .CondaPkg
-.DS_Store
-*.pdf
-*.jld2
-*.png
-*.mp4
-externalization/

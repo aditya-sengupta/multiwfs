@@ -1,7 +1,7 @@
 using FFTW
 using StatsBase: mean, std
 using Plots
-using SciPy
+# using SciPy
 using QuadGK
 
 mutable struct VonKarman

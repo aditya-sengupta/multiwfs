@@ -1,4 +1,4 @@
-using SciPy: signal
+# using SciPy: signal
 using FFTW
 
 function block_diag(matrices...)

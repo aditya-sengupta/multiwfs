@@ -5,10 +5,10 @@ generate_figures:
 	julia scripts_jl/paper_figures/make_figures.jl
 
 externalize:
-	cd externalization; python externalize.py
+	cd externalization; python3 externalize.py
 
 compile_paper:
-	cd paper; latexmk -pdf main.tex
+	cd paper; pdflatex main.tex
 
 push_paper:
 	cd paper; git add *; git commit -m "make"; git push origin master

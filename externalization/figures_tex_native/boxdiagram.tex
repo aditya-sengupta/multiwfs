@@ -1,0 +1,22 @@
+\begin{tikzpicture}[auto, node distance=2cm,>=latex', text width=2.2cm, align=center]
+    \node [name=disturbance, color=red!80!blue] {Atmospheric disturbance};
+    \node [draw, name=dm, below of=disturbance] {DM};
+    \node [input, name=dmturnright, right of=dm] {};
+    \node [input, name=dmturnleft, left of=dm] {};
+    \node [left of=dmturnleft, color=red!80!blue, text width=3cm, name=fastncp, node distance=2.5cm] {Fast non-common-path error};
+    \node [right of=dmturnright, color=red!80!blue, text width=3cm, name=slowncp, node distance=2.5cm] {Slow non-common-path error};
+    \node [draw, below of=dmturnright, name=slowwfs] {Slow WFS / science imager};
+    \node [draw, below of=dmturnleft, name=fastwfs] {Fast WFS};
+    \node [input, name=wfsturnright, below of=slowwfs] {};
+    \node [input, name=wfsturnleft, below of=fastwfs] {};
+    \node [draw, right of=wfsturnleft, name=computer] {Control computation};
+
+    \draw [->] (disturbance) -- (dm);
+    \draw [->] (fastncp) -- (dmturnleft);
+    \draw [->] (slowncp) -- (dmturnright);
+    \draw [->] (dm) -- (dmturnleft) -- (fastwfs);
+    \draw [->] (dm) -- (dmturnright) -- (slowwfs);
+    \draw [->] (fastwfs) -- (wfsturnleft) -- (computer);
+    \draw [->,color=black!40!green] (slowwfs) -- (wfsturnright) -- (computer);
+    \draw [->] (computer) -- (dm);
+\end{tikzpicture}

@@ -3,7 +3,7 @@ using NPZ
 using CairoMakie
 
 begin
-    sim = simgen_ichpf(0.4, 1.4, 15.0, VonKarman(0.001, 0.25), 50.1; leak=0.999)
+    sim = simgen_ichpf(0.4, 1.4, 15.0, VonKarman(0.001, 0.25), 50.0; leak=0.999)
     db_Nfreqpoints = 1000
     Nfreqpoints = db_Nfreqpoints ÷ 2
     k = Nfreqpoints + 1
